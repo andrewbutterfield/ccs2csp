@@ -31,5 +31,8 @@ name_version = progName++" "++version
 main :: IO ()
 main
   = do putStrLn name_version
-       putStrLn semantics
+       putStrLn "Nothing to see here yet."
+       putStrLn "Suggest you use ghci"
+       putStrLn "stack ghci src/Examples.lhs"
+       putStrLn "\n, Goodbye."
 \end{code}

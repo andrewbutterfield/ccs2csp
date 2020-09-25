@@ -106,6 +106,81 @@ Corrollary 3 ([CC],p63)
    P+\tau.(P+Q) &=& \tau.(P+Q)
 \end{eqnarray}
 
+\newpage
+\subsection{Trace Semantics}
+
+We can define traces for CCS terms,
+in a number of ways.
+One is simply the full set of complete traces,
+some of which may be infinite.
+Another has partial traces, all finite,
+with a prefix-closure healthiness condition.
+
+In the sequel, we play fast and loose,
+using recursion to define functions over potentially infinite lists.
+These can all be cast into an appropriate co-recursive form,
+or simply interpreted as such (which is what Haskell's laziness does
+by default).
+We also use cons-notation for lists
+($x:\sigma$ is same as $\seqof x\cat\sigma$).
+
+Here is the full trace set version%
+\footnote{
+ This may omit any deadlock traces
+ (see defn. of $P\setminus L$).
+}
+:
+\begin{eqnarray*}
+   trc &:& CCS \rightarrow \Set (Event^\omega)
+\\ trc(0) &\defeq& \{\nil\}
+\\ trc(\alpha.P)
+   &\defeq&
+   \{ \alpha:\sigma
+      \mid
+      \sigma \in trc(P)
+   \}
+\\ trc(P+Q) &\defeq& trc(P) \cup trc(Q)
+\\ trc(P|Q)
+   &\defeq&
+   \{ t
+      \mid
+      t \in t_P | t_Q, t_P \in trc(P), t_Q \in trc(Q)
+   \}
+\\ trc(P\setminus L)
+   &\defeq&
+   \{ \sigma
+     \mid
+     \sigma \in trc(P),
+     \sigma\cap L = \emptyset
+   \}
+\\ trc(P[f]) &\defeq& \{ f(\sigma) \mid \sigma \in trc(P) \}
+\\ trc(\mu X \bullet P)
+   &\defeq&
+   trc(P(X \mapsto \mu X \bullet P)
+\end{eqnarray*}
+Here the interesting function is one on traces: $s|t$
+returns all valid interleavings of $s$ and $t$.
+\begin{eqnarray*}
+   \_|\_ &:& (Event^\omega)^2 \fun \Set (Event^\omega)
+\\ \nil|t &\defeq& \{t\}
+\\ t|nil &\defeq& \{t\}
+\\ (\alpha:t_1)|(\bar\alpha:t_2)
+   &\defeq&
+   \{ \alpha:(t_1|\bar\alpha:t_2)
+   ,\quad  \tau:(t_1|t_2)
+   ,\quad  \bar\alpha:(\alpha:t_1|t_2)
+   \}
+\\ (\alpha:t_1)|(\beta:t_2)
+   &\defeq&
+   \{ \alpha:(t_1|\beta:t_2)
+   ,\quad  \beta:(\alpha:t_1|t_2)
+   \}
+\end{eqnarray*}
+
+\textbf{Hypothesis}
+\textsf{The definition given here gives the same results
+as the usual derivation of $trc$ from the operational semantics.}
+
 \begin{code}
 semantics :: String
 semantics = "Semantics"
