@@ -1,0 +1,74 @@
+\documentclass[fleqn,10pt]{report}
+\usepackage[a4paper, margin=1.1in]{geometry}
+\usepackage{amssymb,amsmath}
+\usepackage{doc/ccs2csp}
+\usepackage{mathpartir}
+\usepackage{listings}
+\usepackage{doc/lstlhs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\def\includepicture#1{\includegraphics{#1.eps}}
+
+\parindent=0pt % I hate first line indentation
+\parskip=3pt   % I like a visual white gap between paragraphs
+
+
+\author{
+Andrew Butterfield
+\\(based on material by Gerard Ekembe Ngondi)
+\\
+{\small \copyright\ 2020}
+}
+\title{
+  From CCS(-ish) to CSP(-ish)
+}
+\date{
+\today
+}
+
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\chapter{Application}
+
+This program mechanises the CCS-CSP translations
+being explored by Gerard Ekembe Ngondi
+in his work as a Marie-Curie ALECS Fellow at Trinity College Dublin.
+
+Key references:
+\begin{itemize}
+  \item ~[GEN] Working document by Gerard Ekembe Ngondi.
+  \item ~[CC] R. Milner, ``Communication and Concurrency''.
+\end{itemize}
+
+\newpage
+\input{app/Main.lhs}
+
+\chapter{Libraries}
+
+\newpage
+\input{src/Syntax.lhs}
+\newpage
+\input{src/Translate.lhs}
+\newpage
+\input{src/Semantics.lhs}
+
+\appendix
+
+
+\chapter{Tests}
+
+\newpage
+\input{src/Examples.lhs}
+
+% \newpage
+% \input{test/....lhs}
+
+\bibliographystyle{alpha}
+\bibliography{MAIN}
+
+\end{document}
