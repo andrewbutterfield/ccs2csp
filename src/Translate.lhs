@@ -93,51 +93,69 @@ insMapping nm i imap
   = M.insertWith S.union nm (S.singleton i) imap
 \end{code}
 
+\subsubsection{Using $g^*$ for Actions}
 
+This has been revised considerably in [GEN v19 Note3].
 
-\subsection{Indexing with $g^*$}
-
-Based on [GEN] v17, Note 1, 23rd Sep. 2020.
-
-\subsubsection{Set of Indexes}
-
-Here we assume the following minor corrections to Def 2:
 \begin{eqnarray*}
-   iXsucc(P_l) &\defeq& allixof(P_l) \setminus ixof(P_l)
-\\ &\vdots
-\\ allixof(a_{l1}.P_{l2})
-   &\defeq&
-   \{l1\} \cup allixof(P_{l2})
-\\ &\vdots
-\\ allixof(P_{l1} |_{ccs\tau} P_{l2})
-   &\defeq&
-   allixof(P_{l1}) \cup allixof(P_{l2})
+   g^* &:& \Set(Act \times \Nat)
+           \fun
+           \Set(Act \times \Nat)
+           \cup
+           \Set(Act \times \Nat \times \Nat)
+\\ g^*(A) &\defeq& A \cup \{a_{ij} \mid a_i, \bar{a}_j \in A, i < j\}
+                  \cup \{a_{ji} \mid a_i, \bar{a}_j \in A, j < i\}
+\\ g1_A(a_i) &\defeq& \{a_i\}
+\\ g2_A(a_i) &\defeq& \{a_{ij} \mid \bar{a}_j \in A, i < j\}
+                 \cup \{a_{ji} \mid \bar{a}_j \in A, j < i\}
 \end{eqnarray*}
-However, this would appear to be redundant - $ixSucc$
-is easy to compute
+
+\begin{code}
+gsa :: Set Event -> Set Event
+gsa evts = evts `S.union` (S.unions (S.map (gsa2 evts) evts))
+
+gas1 = S.singleton
+
+gsa2 evts evt@(a,One i) = gsa2' a i $ S.toList evts  -- for now
+gsa2 _ e = error ("gsa2: not a singly indexed event "++show e)
+
+gsa2' a i [] = S.empty
+gsa2' a i ((a',One j):evtl)
+  |  a == bar a' && i /= j  =  S.insert (i2event a i j) $ gsa2' a i evtl
+gsa2' a i (_:evtl)          =  gsa2' a i evtl
+\end{code}
+
+We assume the input event are single prefixes
 
 \subsubsection{Using $g^*$ for Processes}
+
+
+Based on [GEN v19 Note3] annot and [VK Note 4 Nov 2020]
+
+The notation in [VK] Note 4 uses $P[g^*,A]$ for the application
+of $g^*$ to process $P$ with ``context`` $A$.
+
+\begin{quote}
+``
+Def. $P[g^*,A]$ is defined when $A \cap Ab(P) = \emptyset$
+and
+\begin{eqnarray*}
+   0[g^*,A]  &\defeq& 0
+\\ P \mid Q [g^*,A]
+   &\defeq&
+   P[g^*,A \uplus Ab(Q)] \mid Q [g^*,A \uplus Ab(P)]
+\\ P \upharpoonright B [g^*,A]
+  &\defeq&
+  P[g^*,A] \upharpoonright g^*_A(B)
+\end{eqnarray*}
+'' [VK, Note 4]
+\end{quote}
 
 \begin{code}
 gsp :: context -> CCS -> (CCS,context)
 gsp ctxt ccs = error "g*(proc) not yet defined"
 \end{code}
 
-\subsubsection{Using $g^*$ for Actions}
-
-Note that this function is called in the context of
-a CCS parallel of the form:
-\[
-  P_1 | P_2 | \dots | P_k
-\]
-where none of the $P_i$ are themselves a parallel composition.
-
-\begin{code}
-gsa :: context -> Prefix -> ([Prefix],context)
-gsa ctxt T = ([T],ctxt)
-gsa ctxt t'@(T' _) = ([t'],ctxt)
-gsa ctxt (Evt e) =  error "g*(act) not yet defined for std event"
-\end{code}
 
 
 \subsection{Translate toward CSP}
