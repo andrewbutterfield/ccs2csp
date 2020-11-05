@@ -8,6 +8,11 @@ LICENSE: BSD3, see file LICENSE at reasonEq root
 module Examples where
 
 import Control.Monad
+import Data.Set (Set)
+import qualified Data.Set as S
+import Data.Map (Map)
+import qualified Data.Map as M
+
 import Syntax
 import Translate
 import Semantics

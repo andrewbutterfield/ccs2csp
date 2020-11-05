@@ -95,7 +95,7 @@ insMapping nm i imap
 
 \subsubsection{Using $g^*$ for Actions}
 
-This has been revised considerably in [GEN v19 Note3].
+This has been revised considerably in [GEN v19 Note4].
 
 \begin{eqnarray*}
    g^* &:& \Set(Act \times \Nat)
@@ -103,12 +103,15 @@ This has been revised considerably in [GEN v19 Note3].
            \Set(Act \times \Nat)
            \cup
            \Set(Act \times \Nat \times \Nat)
-\\ g^*(A) &\defeq& A \cup \{a_{ij} \mid a_i, \bar{a}_j \in A, i < j\}
-                  \cup \{a_{ji} \mid a_i, \bar{a}_j \in A, j < i\}
-\\ g1_A(a_i) &\defeq& \{a_i\}
-\\ g2_A(a_i) &\defeq& \{a_{ij} \mid \bar{a}_j \in A, i < j\}
-                 \cup \{a_{ji} \mid \bar{a}_j \in A, j < i\}
+\\ g^*(S) &\defeq& A \cup \{a_{ij} \mid a_i, \bar{a}_j \in S, i < j\}
+                  \cup \{a_{ji} \mid a_i, \bar{a}_j \in S, j < i\}
+\\
+\\ g^*(S,a_i) &\defeq& \{a_i\} \cup g\pi2(S,a_i)
+\\ g\pi2(S,a_i) &\defeq&
+   \{a_{ij} \mid \bar{a}_j \in S, i < j\}
+                 \cup \{a_{ji} \mid \bar{a}_j \in S, j < i\}
 \end{eqnarray*}
+Note that $g^*(\{\},a_i) = \{a_i\}$.
 
 \begin{code}
 gsa :: Set Event -> Set Event
@@ -116,7 +119,7 @@ gsa evts = evts `S.union` (S.unions (S.map (gsa2 evts) evts))
 
 gas1 = S.singleton
 
-gsa2 evts evt@(a,One i) = gsa2' a i $ S.toList evts  -- for now
+gsa2 evts evt@(a,One i) = gsa2' a i $ S.toList evts
 gsa2 _ e = error ("gsa2: not a singly indexed event "++show e)
 
 gsa2' a i [] = S.empty
@@ -125,12 +128,12 @@ gsa2' a i ((a',One j):evtl)
 gsa2' a i (_:evtl)          =  gsa2' a i evtl
 \end{code}
 
-We assume the input event are single prefixes
+We assume the input events are single prefixes only.
 
 \subsubsection{Using $g^*$ for Processes}
 
 
-Based on [GEN v19 Note3] annot and [VK Note 4 Nov 2020]
+Based on [GEN v19 Note4] annot and [VK Note 4 Nov 2020]
 
 The notation in [VK] Note 4 uses $P[g^*,A]$ for the application
 of $g^*$ to process $P$ with ``context`` $A$.
@@ -151,9 +154,38 @@ and
 '' [VK, Note 4]
 \end{quote}
 
+[GEN v19 Note 4] responds thus:
+
+\begin{eqnarray*}
+   g^*(S,0) &\defeq& 0
+\\ g^*(S,\alpha.P) &\defeq& \Sigma_{b \in g^*(S,\alpha)} b.g^*(S,P)
+\\ g^*(S,P+Q) &\defeq& g^*(S,P) + g^*(S,Q)
+\\ g^*(S,P \mid_{ccs\tau} Q)
+   &\defeq& g^*(S\cup\Alf Q, P) \mid_{ccs\tau} g^*(S\cup\Alf P, Q)
+\\ g^*(S,P\restrict A) &\defeq& g^*(S,P)\restrict g^*(S,A)
+\\ g^*(S,P \hide A) &\defeq& g^*(S,P) \hide g^*(S,A)
+\\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
+\\
+\\ g^*(S,A) &\defeq& \{g^*(S,a) \mid a \in A \}
+\end{eqnarray*}
+
 \begin{code}
-gsp :: context -> CCS -> (CCS,context)
-gsp ctxt ccs = error "g*(proc) not yet defined"
+gsp :: Set Event -> CCS -> CCS
+gsp _    Zero  =  Zero
+gsp _    x@(PVar _)  =  x
+gsp evts (Sum ccss) = Sum $ map (gsp evts) ccss
+gsp evts (Rec x ccs) = Rec x $ gsp evts ccs
+gsp evts (Rstr evtl ccs) = Rstr (gse evts evtl) $ gsp evts ccs
+gsp evts ren@(Ren f ccs) = error ("gsp not defined for renaming: "++show ren)
+gsp evts prfx@(Pfx (Evt alpha) ccs)
+  = Sum $ map (mkpre (gsp evts ccs)) $ S.toList $ gsa2 evts alpha
+  where mkpre p alpha = Pfx (Evt alpha) p
+gsp evts (Pfx evt ccs) = error ("gsp not define for "++show evt)
+gsp evts par@(Par csss) = error ("gsp NYfI: "++show par)
+
+gsp0 = gsp S.empty
+
+gse evts evtl = concat $ map (S.toList . gsa2 evts) evtl
 \end{code}
 
 
