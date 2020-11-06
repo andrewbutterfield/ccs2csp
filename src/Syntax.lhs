@@ -70,7 +70,8 @@ data Prefix
 
 instance Show Prefix where
   show T = "t"
-  show (Evt (n,i)) = show n ++ show i
+  show (Evt (Std s,i)) = s ++ show i
+  show (Evt (Bar s,i)) = s ++ show i ++ "-bar"
   show (T' n) = show T ++ "["++n++"|"++n++"-bar]"
 
 pfxbar :: Prefix -> Prefix
@@ -87,7 +88,7 @@ type RenFun = [(String,String)]
              \mid \alpha.P
              \mid P|Q
              \mid P+Q
-             \mid P\setminus L
+             \mid P\restrict L
              \mid P[f]
              \mid X
              \mid \mu X \bullet P
@@ -114,6 +115,33 @@ data CCS
 -- f s2s (Rec s ccs)
 -- f s2s ccs
 \end{code}
+
+\begin{code}
+renameEvt :: RenFun -> Event -> Event
+renameEvt s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
+renameEvt s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
+
+renameStr s []  =  s
+renameStr s ((f,t):s2s)
+  |  s == f     =  t
+  |  otherwise  =  renameStr s s2s
+\end{code}
+
+\begin{code}
+alf :: CCS -> Set Event
+alf Zero           =  S.empty
+alf (Pfx pfx ccs)  =  alfPfx pfx `S.union` alf ccs
+alf (Sum ccss)     =  S.unions $ map alf ccss
+alf (Par ccss)     =  S.unions $ map alf ccss
+alf (Rstr es ccs)  =  alf ccs S.\\ S.fromList es  -- is this right?
+alf (Ren s2s ccs)  =  S.map (renameEvt s2s) $ alf ccs
+alf (PVar s)       =  S.empty
+alf (Rec s ccs)    =  alf ccs
+
+alfPfx (Evt evt)  =  S.singleton evt
+alfPfx _          =  S.empty
+\end{code}
+
 
 \begin{code}
 instance Show CCS where

@@ -43,7 +43,7 @@ numbered from 0 upwards.
 Currently we fail if tagged-taus are found.
 \begin{code}
 indexNames :: CCS -> CCS
-indexNames = fst . iFrom 0
+indexNames = fst . iFrom 1
 
 iFrom i (Pfx  pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
@@ -114,10 +114,10 @@ This has been revised considerably in [GEN v19 Note4].
 Note that $g^*(\{\},a_i) = \{a_i\}$.
 
 \begin{code}
-gsa :: Set Event -> Set Event
-gsa evts = evts `S.union` (S.unions (S.map (gsa2 evts) evts))
+gs :: Set Event -> Set Event
+gs evts = evts `S.union` (S.unions (S.map (gsa2 evts) evts))
 
-gas1 = S.singleton
+gsa1 = S.singleton
 
 gsa2 evts evt@(a,One i) = gsa2' a i $ S.toList evts
 gsa2 _ e = error ("gsa2: not a singly indexed event "++show e)
@@ -126,6 +126,8 @@ gsa2' a i [] = S.empty
 gsa2' a i ((a',One j):evtl)
   |  a == bar a' && i /= j  =  S.insert (i2event a i j) $ gsa2' a i evtl
 gsa2' a i (_:evtl)          =  gsa2' a i evtl
+
+gsa evts a = gsa1 a `S.union` gsa2 evts a
 \end{code}
 
 We assume the input events are single prefixes only.
@@ -162,8 +164,7 @@ and
 \\ g^*(S,P+Q) &\defeq& g^*(S,P) + g^*(S,Q)
 \\ g^*(S,P \mid_{ccs\tau} Q)
    &\defeq& g^*(S\cup\Alf Q, P) \mid_{ccs\tau} g^*(S\cup\Alf P, Q)
-\\ g^*(S,P\restrict A) &\defeq& g^*(S,P)\restrict g^*(S,A)
-\\ g^*(S,P \hide A) &\defeq& g^*(S,P) \hide g^*(S,A)
+\\ g^*(S,P\restrict B) &\defeq& g^*(S,P)\restrict g^*(S,B)
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
 \\
 \\ g^*(S,A) &\defeq& \{g^*(S,a) \mid a \in A \}
@@ -178,17 +179,58 @@ gsp evts (Rec x ccs) = Rec x $ gsp evts ccs
 gsp evts (Rstr evtl ccs) = Rstr (gse evts evtl) $ gsp evts ccs
 gsp evts ren@(Ren f ccs) = error ("gsp not defined for renaming: "++show ren)
 gsp evts prfx@(Pfx (Evt alpha) ccs)
-  = Sum $ map (mkpre (gsp evts ccs)) $ S.toList $ gsa2 evts alpha
+  = Sum $ map (mkpre (gsp evts ccs)) $ S.toList $ gsa evts alpha
   where mkpre p alpha = Pfx (Evt alpha) p
 gsp evts (Pfx evt ccs) = error ("gsp not define for "++show evt)
-gsp evts par@(Par csss) = error ("gsp NYfI: "++show par)
+gsp evts par@(Par csss)
+  = Par $ walk (gpar evts) [] [] csss $ map alf csss
+
+walk gf _  _  []     []      =  []
+walk gf sp sa (p:ps) (a:as)  =  gf (sa++as) p  : walk gf (p:sp) (a:sa) ps as
+
+gpar evts evtsl p = gsp (S.unions $ evts:evtsl) p
 
 gsp0 = gsp S.empty
 
 gse evts evtl = concat $ map (S.toList . gsa2 evts) evtl
 \end{code}
 
+In [GEN v18, Def 2.1, p7] we have:
+\begin{eqnarray*}
+   P \hide A &\defeq& ( P \mid \mu X (\Pi_{} a.X))\restrict A
+\end{eqnarray*}
 
+Looking up the referecence ([16])  cited there (Milner)
+we see the following, simplified here a bit:
+\begin{eqnarray*}
+   Ever(\alpha) &=& \alpha.Ever(\alpha)
+\\ P \hide H &=&
+   ( P \mid Ever(\bar\ell_1) \mid \dots \mid Ever(\bar\ell_n)) \restrict H
+\\ && \where H =\{ \ell_1, \dots, \ell_n\}
+\\ P \hide H
+   &\defeq&
+   ( P \mid \Pi_{\ell \in H} (\mu X . \bar\ell . X) ) \restrict H
+\end{eqnarray*}
+Note that the recursion is under the iterated parallel,
+not enclosing it.
+\begin{code}
+ever :: Event -> CCS
+ever evt = Rec "X" $ Pfx (Evt $ evtbar evt) $ PVar "X"
+infixl 7 \\
+(\\) :: CCS -> [Event] -> CCS
+ccs \\ evtl  =  Rstr evtl $ Par (ccs:map ever evtl)
+\end{code}
+
+Here we want to prove(?) that
+\begin{eqnarray*}
+\\ g^*(S,P \hide B) &=& g^*(S,P) \hide g^*(S\cup\Alf P,B)
+\end{eqnarray*}
+\begin{code}
+prop_gstar_hide evts ccs evtl
+ = gsp evts (ccs \\ evtl)
+   ==
+   gsp evts ccs \\ gse (evts `S.union` alf ccs) evtl
+\end{code}
 
 \subsection{Translate toward CSP}
 

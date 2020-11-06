@@ -87,3 +87,25 @@ xms2 = Par [ Pfx a (Pfx b (Par [ Pfx abar Zero, Pfx b Zero]))
 -- )
 -- \{a0;5,b1;4,b3;4}
 \end{code}
+
+Examples from [GEN, v19 Note4+] and [VK Note 4]
+
+\begin{code}
+-- GEN: v19 Note 4 (update):
+-- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
+aIabar = Par [a0,abar0]
+i_aIabar = indexNames aIabar
+g_aIabar = gsp0 i_aIabar
+-- p21 g*({},(a.0 | a-bar.0)|' {a})
+   -- =  ((a1.0+a12.0)|(a2-bar.0+a12-bar.0)) |' {a1,a2}
+noaIabar = Rstr [ea] aIabar
+i_noaIabar = indexNames noaIabar
+g_noaIabar = gsp0 i_noaIabar
+-- VK:
+-- (a1 | a2-bar)[g*]   -->  (a1 + a12 | a2-bar + a12-bar)
+-- a \restrict a | a-bar  -->  a2
+-- (a1 | a2-bar) \restrict a   -->  a2  STOP  (?)
+-- (a1 | a2-bar)\restrict(a1,a2)[g*,0]  --> a2 STOP ?
+-- ( a1 \restrict a1 |  a2-bar)[g*,0]
+    -- -->  (a1+a12)\restrict a1,a12 | a2-bar + a12-bar
+\end{code}
