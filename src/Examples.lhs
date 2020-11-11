@@ -48,6 +48,7 @@ x18 = Rstr [ea] $ Par [Pfx a p, Pfx abar q, Pfx abar r, Pfx abar s]
 xl19 = Par [Pfx a Zero, Pfx abar Zero]
 ta = T' "a"
 a0 = Pfx a Zero; abar0 = Pfx abar Zero
+b0 = Pfx b Zero; bbar0 = Pfx bbar Zero
 xr19 = Sum [Pfx a $ abar0, Pfx abar $ a0, Pfx ta Zero]
 
 --v17, 4.1.2, p19 bottom
@@ -101,6 +102,10 @@ g_aIabar = gsp0 i_aIabar
 noaIabar = Rstr [ea] aIabar
 i_noaIabar = indexNames noaIabar
 g_noaIabar = gsp0 i_noaIabar
+-- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
+bAndaIabar = Sum [noaIabar,b0]
+i_bAndaIabar = indexNames bAndaIabar
+g_bAndaIabar = gsp0 i_bAndaIabar
 -- VK:
 -- (a1 | a2-bar)[g*]   -->  (a1 + a12 | a2-bar + a12-bar)
 -- a \restrict a | a-bar  -->  a2

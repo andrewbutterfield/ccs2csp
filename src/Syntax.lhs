@@ -22,6 +22,10 @@ instance Show Name where
   show (Std s)  =  s
   show (Bar s)  =  s ++ "-bar"
 
+root :: Name -> String
+root (Std s)  =  s
+root (Bar s)  =  s
+
 bar :: Name -> Name
 bar (Std s)  =  Bar s
 bar (Bar s)  =  Std s
@@ -55,7 +59,8 @@ i2event nm i j -- reorder indices so first <= second
   | otherwise  =  (nm,Two i j)
 
 showEvent :: Event -> String
-showEvent (nm,i) = show nm ++ show i
+showEvent (Std nm,i) = nm ++ show i
+showEvent (Bar nm,i) = nm ++ show i ++ "-bar"
 
 evtbar :: Event -> Event
 evtbar (nm,i) = (bar nm,i)

@@ -45,14 +45,16 @@ Currently we fail if tagged-taus are found.
 indexNames :: CCS -> CCS
 indexNames = fst . iFrom 1
 
-iFrom i (Pfx  pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
+iFrom i (Pfx pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
 iFrom i (Sum ccss) = (Sum ccss',i')
   where (ccss',i') = paramileave iFrom i ccss
 iFrom i (Par ccss) = (Par ccss',i')
   where (ccss',i') = paramileave iFrom i ccss
-iFrom i (Rstr es ccs) = (Rstr es ccs',i')
-  where (ccs',i') = iFrom i ccs
+iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
+  where
+    (ccs',i') = iFrom i ccs
+    es' = filter (cameFrom es) $ S.toList $ alf ccs'
 iFrom i (Ren pfn ccs) = (Ren pfn ccs',i')
   where (ccs',i') = iFrom i ccs
 iFrom i (Rec nm ccs) = (Rec nm ccs',i')
@@ -66,6 +68,9 @@ iPfx i pfx@(T' _) = error ("pre-indexing CCS term with tagged-tau "++show pfx)
 
 ePfx :: Int -> Event -> Event
 ePfx i (nm,_) = (nm,One i)
+
+cameFrom :: [Event] -> Event -> Bool
+cameFrom es e = (root . fst) e `elem` map (root . fst) es
 \end{code}
 
 Given a CCS term, return a mapping from events
@@ -164,7 +169,7 @@ and
 \\ g^*(S,P+Q) &\defeq& g^*(S,P) + g^*(S,Q)
 \\ g^*(S,P \mid_{ccs\tau} Q)
    &\defeq& g^*(S\cup\Alf Q, P) \mid_{ccs\tau} g^*(S\cup\Alf P, Q)
-\\ g^*(S,P\restrict B) &\defeq& g^*(S,P)\restrict g^*(S,B)
+\\ g^*(S,P\restrict B) &\defeq& g^*(S,P)\restrict g^*(S\cup\Alf P,B)
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
 \\
 \\ g^*(S,A) &\defeq& \{g^*(S,a) \mid a \in A \}
@@ -176,7 +181,10 @@ gsp _    Zero  =  Zero
 gsp _    x@(PVar _)  =  x
 gsp evts (Sum ccss) = Sum $ map (gsp evts) ccss
 gsp evts (Rec x ccs) = Rec x $ gsp evts ccs
-gsp evts (Rstr evtl ccs) = Rstr (gse evts evtl) $ gsp evts ccs
+gsp evts (Rstr evtl ccs)
+  = let ccs' = gsp evts ccs
+        evts' = evts `S.union` alf ccs'
+    in Rstr (gse evts' evtl) ccs'
 gsp evts ren@(Ren f ccs) = error ("gsp not defined for renaming: "++show ren)
 gsp evts prfx@(Pfx (Evt alpha) ccs)
   = Sum $ map (mkpre (gsp evts ccs)) $ S.toList $ gsa evts alpha
