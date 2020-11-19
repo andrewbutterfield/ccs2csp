@@ -145,6 +145,8 @@ Based on [GEN v19 Note4] annot and [VK Note 4 Nov 2020]
 The notation in [VK] Note 4 uses $P[g^*,A]$ for the application
 of $g^*$ to process $P$ with ``context`` $A$.
 
+Now as revised in [GEN v19 Note5]
+
 \begin{quote}
 ``
 Def. $P[g^*,A]$ is defined when $A \cap Ab(P) = \emptyset$
@@ -161,7 +163,12 @@ and
 '' [VK, Note 4]
 \end{quote}
 
-[GEN v19 Note 4] responds thus:
+[GEN v19 Note 5] and meetimg discussion suggest
+the following invariant
+
+Given $P\restrict B$, $B$ must be saturated w.r.t. $P$,
+i.e, if $\{a_i,\bar a_j\} \subseteq Ab(P)$ then
+$\{a_i,\bar a_j\} \subseteq B$.
 
 \begin{eqnarray*}
    g^*(S,0) &\defeq& 0
@@ -169,9 +176,18 @@ and
 \\ g^*(S,P+Q) &\defeq& g^*(S,P) + g^*(S,Q)
 \\ g^*(S,P \mid_{ccs\tau} Q)
    &\defeq& g^*(S\cup\Alf Q, P) \mid_{ccs\tau} g^*(S\cup\Alf P, Q)
-\\ g^*(S,P\restrict B) &\defeq& g^*(S,P)\restrict g^*(S\cup\Alf P,B)
+\\ g^*(S,P\restrict B)
+   &\defeq&
+   g^*(S,P)\restrict g^*(S,B)
+   \cup
+   \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
+\\ \textbf{or?}
+   &\defeq&
+   g^*(S,P)\restrict B
+   \cup
+   \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
-\\
+\
 \\ g^*(S,A) &\defeq& \{g^*(S,a) \mid a \in A \}
 \end{eqnarray*}
 
@@ -242,8 +258,26 @@ prop_gstar_hide evts ccs evtl
 
 \subsection{Translate toward CSP}
 
+Working from [GEN v19 Note5]
+
+
 This is based on whiteboard notes by Vasileios Koutavas,
 on MS Teams, on 24th Sep 2020.
+
+\begin{eqnarray*}
+   conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
+\\ tautail(P) &\defeq& P' \where P \trans\tau P'
+\\ tl(0) &\defeq& STOP
+\\ tl(\tau.P) &\defeq& tl(P)
+\\ tl(a.P) &\defeq& a \then tl(P)
+\\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{Ab(P)\cap{Ab(Q)}} tl(Q)
+\\ tl(P\restrict A) &\defeq& tl(P) \parallel_A STOP
+\\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
+\\ tl(P_1+P_2) &\defeq&
+   (tl(P_1) \Box tl(P_2))
+   \sqcap
+   tautail(P_1) \sqcap tautail(P_2)
+\end{eqnarray*}
 
 We use $\Sigma_i a_i . P$ as shorthand for $\Sigma_i (a_i . p)$,
 and we consider $a_{ij}$, $a_{ji}$ to be the same,
