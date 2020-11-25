@@ -41,9 +41,14 @@ paramileave f i (a:as)
 Here we attach single indices to every standard or barred event,
 numbered from 0 upwards.
 Currently we fail if tagged-taus are found.
+
+This is called $c2ix$ in [GEN v19 etc.]
 \begin{code}
+c2ix = indexNames
+
 indexNames :: CCS -> CCS
 indexNames = fst . iFrom 1
+
 
 iFrom i (Pfx pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
@@ -179,13 +184,8 @@ $\{a_i,\bar a_j\} \subseteq B$.
 \\ g^*(S,P\restrict B)
    &\defeq&
    g^*(S,P)\restrict g^*(S,B)
-   \cup
-   \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
-\\ \textbf{or?}
-   &\defeq&
-   g^*(S,P)\restrict B
-   \cup
-   \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
+   % \cup
+   % \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
 \
 \\ g^*(S,A) &\defeq& \{g^*(S,a) \mid a \in A \}
@@ -193,21 +193,20 @@ $\{a_i,\bar a_j\} \subseteq B$.
 
 \begin{code}
 gsp :: Set Event -> CCS -> CCS
-gsp _    Zero  =  Zero
-gsp _    x@(PVar _)  =  x
-gsp evts (Sum ccss) = Sum $ map (gsp evts) ccss
-gsp evts (Rec x ccs) = Rec x $ gsp evts ccs
-gsp evts (Rstr evtl ccs)
-  = let ccs' = gsp evts ccs
-        evts' = evts `S.union` alf ccs'
-    in Rstr (gse evts' evtl) ccs'
-gsp evts ren@(Ren f ccs) = error ("gsp not defined for renaming: "++show ren)
+gsp _    Zero             =  Zero
+gsp _    v@(PVar _)       =  v
+gsp evts (Sum ccss)       =  Sum $ map (gsp evts) ccss
+gsp evts (Rec x ccs)      =  Rec x $ gsp evts ccs
+gsp evts (Rstr evtl ccs)  =  Rstr (gse evts evtl) (gsp evts ccs)
+gsp evts (Ren f ccs)      =  Ren f $ gsp evts ccs
+gsp evts (Par csss)       =  Par $ walk (gpar evts) [] [] csss $ map alf csss
 gsp evts prfx@(Pfx (Evt alpha) ccs)
-  = Sum $ map (mkpre (gsp evts ccs)) $ S.toList $ gsa evts alpha
-  where mkpre p alpha = Pfx (Evt alpha) p
-gsp evts (Pfx evt ccs) = error ("gsp not define for "++show evt)
-gsp evts par@(Par csss)
-  = Par $ walk (gpar evts) [] [] csss $ map alf csss
+                          =  Sum $ map (mkpre ccs') alpha'
+  where
+    ccs' = gsp evts ccs
+    alpha' =  S.toList $ gsa evts alpha
+    mkpre p alpha = Pfx (Evt alpha) p
+gsp evts (Pfx evt ccs)    =  Pfx evt $ gsp evts ccs
 
 walk gf _  _  []     []      =  []
 walk gf sp sa (p:ps) (a:as)  =  gf (sa++as) p  : walk gf (p:sp) (a:sa) ps as
@@ -247,22 +246,32 @@ ccs \\ evtl  =  Rstr evtl $ Par (ccs:map ever evtl)
 
 Here we want to prove(?) that
 \begin{eqnarray*}
-\\ g^*(S,P \hide B) &=& g^*(S,P) \hide g^*(S\cup\Alf P,B)
+\\ g^*(S,P \hide B) &=& g^*(S,P) \hide g^*(S\cup B,B)
 \end{eqnarray*}
 \begin{code}
 prop_gstar_hide evts ccs evtl
  = gsp evts (ccs \\ evtl)
    ==
-   gsp evts ccs \\ gse (evts `S.union` alf ccs) evtl
+   gsp evts ccs \\ gse (evts `S.union` S.fromList evtl) evtl
+\end{code}
+
+\begin{eqnarray*}
+   c4star(S,P) &\defeq& g^*(S,c2ix(P))
+\\ c2star(S,P)
+   &\defeq&
+   c4star(S,P)\restrict \{g\pi_2(a_i)\mid a)i \in \Alf c2ix(P)\}
+\end{eqnarray*}
+\begin{code}
+c4star evts ccs = gsp evts $ c2ix ccs
 \end{code}
 
 \subsection{Translate toward CSP}
 
-Working from [GEN v19 Note5]
+Working from [GEN v19 Note5, Note6, Note6\_Update]
 
 
 This is based on whiteboard notes by Vasileios Koutavas,
-on MS Teams, on 24th Sep 2020.
+on MS Teams, on 18th Nov 2020.
 
 \begin{eqnarray*}
    conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
@@ -278,6 +287,17 @@ on MS Teams, on 24th Sep 2020.
    \sqcap
    tautail(P_1) \sqcap tautail(P_2)
 \end{eqnarray*}
+
+
+\begin{eqnarray*}
+   t2csp(P) &\defeq& tl(conm(c4star(P)))
+\end{eqnarray*}
+
+
+\newpage
+\subsection{Old Stuff}
+
+\textbf{No Longer sure what the following is about}
 
 We use $\Sigma_i a_i . P$ as shorthand for $\Sigma_i (a_i . p)$,
 and we consider $a_{ij}$, $a_{ji}$ to be the same,
