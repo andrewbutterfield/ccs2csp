@@ -57,7 +57,7 @@ Law $E_1 = E_2$ means that, for all $\alpha$,
 that $E_1 \wktrans\alpha E'$ iff $E_2 \wktrans\alpha E'$.
 
 \begin{code}
-type LawFun m = CCS -> m CCS
+type LawFun m = Process -> m Process
 \end{code}
 
 

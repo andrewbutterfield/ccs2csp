@@ -46,7 +46,7 @@ This is called $c2ix$ in [GEN v19 etc.]
 \begin{code}
 c2ix = indexNames
 
-indexNames :: CCS -> CCS
+indexNames :: Process -> Process
 indexNames = fst . iFrom 1
 
 
@@ -54,7 +54,7 @@ iFrom i (Pfx pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
 iFrom i (Sum ccss) = (Sum ccss',i')
   where (ccss',i') = paramileave iFrom i ccss
-iFrom i (Par ccss) = (Par ccss',i')
+iFrom i (Par nms ccss) = (Par nms ccss',i')
   where (ccss',i') = paramileave iFrom i ccss
 iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
@@ -82,14 +82,14 @@ Given a CCS term, return a mapping from events
 to the set of indices associated with each event.
 \begin{code}
 type IxMap = Map Name (Set Index)
-indexMap :: CCS -> IxMap
+indexMap :: Process -> IxMap
 indexMap = iMap M.empty
 
 iMap imap (Pfx (Evt (nm,i)) ccs)  =  iMap imap' ccs
                      where imap'  =  insMapping nm i imap
 iMap imap (Pfx  _ ccs)            =  iMap imap ccs
 iMap imap (Sum ccss)              =  iSeqMap imap ccss
-iMap imap (Par ccss)              =  iSeqMap imap ccss
+iMap imap (Par _ ccss)            =  iSeqMap imap ccss
 iMap imap (Rstr es ccs)           =  iMap imap ccs
 iMap imap (Ren _ ccs)             =  iMap imap ccs
 iMap imap (Rec nm ccs)            =  iMap imap ccs
@@ -107,6 +107,7 @@ insMapping nm i imap
 
 This has been revised considerably in [GEN v19 Note4].
 
+\textbf{NOTE: we need to check this, look at Note7 (Dec 1st)}
 \begin{eqnarray*}
    g^* &:& \Set(Act \times \Nat)
            \fun
@@ -154,13 +155,13 @@ Now as revised in [GEN v19 Note5]
 
 \begin{quote}
 ``
-Def. $P[g^*,A]$ is defined when $A \cap Ab(P) = \emptyset$
+Def. $P[g^*,A]$ is defined when $A \cap \Alf(P) = \emptyset$
 and
 \begin{eqnarray*}
    0[g^*,A]  &\defeq& 0
 \\ P \mid Q [g^*,A]
    &\defeq&
-   P[g^*,A \uplus Ab(Q)] \mid Q [g^*,A \uplus Ab(P)]
+   P[g^*,A \uplus \Alf(Q)] \mid Q [g^*,A \uplus \Alf(P)]
 \\ P \upharpoonright B [g^*,A]
   &\defeq&
   P[g^*,A] \upharpoonright g^*_A(B)
@@ -172,7 +173,7 @@ and
 the following invariant
 
 Given $P\restrict B$, $B$ must be saturated w.r.t. $P$,
-i.e, if $\{a_i,\bar a_j\} \subseteq Ab(P)$ then
+i.e, if $\{a_i,\bar a_j\} \subseteq \Alf(P)$ then
 $\{a_i,\bar a_j\} \subseteq B$.
 
 \begin{eqnarray*}
@@ -192,14 +193,14 @@ $\{a_i,\bar a_j\} \subseteq B$.
 \end{eqnarray*}
 
 \begin{code}
-gsp :: Set Event -> CCS -> CCS
+gsp :: Set Event -> Process -> Process
 gsp _    Zero             =  Zero
 gsp _    v@(PVar _)       =  v
 gsp evts (Sum ccss)       =  Sum $ map (gsp evts) ccss
 gsp evts (Rec x ccs)      =  Rec x $ gsp evts ccs
 gsp evts (Rstr evtl ccs)  =  Rstr (gse evts evtl) (gsp evts ccs)
 gsp evts (Ren f ccs)      =  Ren f $ gsp evts ccs
-gsp evts (Par csss)       =  Par $ walk (gpar evts) [] [] csss $ map alf csss
+gsp evts (Par [] csss)    =  Par [] $ walk (gpar evts) [] [] csss $ map alf csss
 gsp evts prfx@(Pfx (Evt alpha) ccs)
                           =  Sum $ map (mkpre ccs') alpha'
   where
@@ -207,6 +208,8 @@ gsp evts prfx@(Pfx (Evt alpha) ccs)
     alpha' =  S.toList $ gsa evts alpha
     mkpre p alpha = Pfx (Evt alpha) p
 gsp evts (Pfx evt ccs)    =  Pfx evt $ gsp evts ccs
+
+gsp _ csp  =  error ("Cannot gsp CSP syntax:("++show csp++")")
 
 walk gf _  _  []     []      =  []
 walk gf sp sa (p:ps) (a:as)  =  gf (sa++as) p  : walk gf (p:sp) (a:sa) ps as
@@ -237,11 +240,11 @@ we see the following, simplified here a bit:
 Note that the recursion is under the iterated parallel,
 not enclosing it.
 \begin{code}
-ever :: Event -> CCS
+ever :: Event -> Process
 ever evt = Rec "X" $ Pfx (Evt $ evtbar evt) $ PVar "X"
 infixl 7 \\
-(\\) :: CCS -> [Event] -> CCS
-ccs \\ evtl  =  Rstr evtl $ Par (ccs:map ever evtl)
+(\\) :: Process -> [Event] -> Process
+ccs \\ evtl  =  Rstr evtl $ Par [] (ccs:map ever evtl)
 \end{code}
 
 Here we want to prove(?) that
@@ -267,30 +270,34 @@ c4star evts ccs = gsp evts $ c2ix ccs
 
 \subsection{Translate toward CSP}
 
-Working from [GEN v19 Note5, Note6, Note6\_Update]
-
-
-This is based on whiteboard notes by Vasileios Koutavas,
-on MS Teams, on 18th Nov 2020.
+Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
 
 \begin{eqnarray*}
    conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
-\\ tautail(P) &\defeq& P' \where P \trans\tau P'
-\\ tl(0) &\defeq& STOP
+\end{eqnarray*}
+
+\begin{eqnarray*}
+   tautail(P) &\defeq&
+     \{ P' \mid P \trans\tau P' \} \cup \{\miracle\}
+\end{eqnarray*}
+We abuse notation a little: $\miracle$ is the unit of $\sqcap$.
+
+
+\begin{eqnarray*}
+   tl(0) &\defeq& STOP
 \\ tl(\tau.P) &\defeq& tl(P)
-\\ tl(a.P) &\defeq& a \then tl(P)
-\\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{Ab(P)\cap{Ab(Q)}} tl(Q)
+\\ tl(a.P) &\defeq& tl(a) \then tl(P)
+\\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{\Alf P\cap{\Alf Q}} tl(Q)
 \\ tl(P\restrict A) &\defeq& tl(P) \parallel_A STOP
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
 \\ tl(P_1+P_2) &\defeq&
    (tl(P_1) \Box tl(P_2))
-   \sqcap
-   tautail(P_1) \sqcap tautail(P_2)
+   \sqcap  \{ tautail(tl(P_1)) \cup tautail(tl(P_2)) \}
 \end{eqnarray*}
 
 
 \begin{eqnarray*}
-   t2csp(P) &\defeq& tl(conm(c4star(P)))
+    t2csp(P) &\defeq& tl(conm(c4star(P)))
 \end{eqnarray*}
 
 
@@ -335,20 +342,20 @@ range over $a,b,c,\dots$ and $\bar a,\bar b, \bar c,\dots$.
 \end{eqnarray*}
 
 \begin{code}
-ccs2star :: CCS -> CCS
+ccs2star :: Process -> Process
 ccs2star ccs
  = c2star imap iccs
  where iccs = indexNames ccs
        imap = indexMap iccs
 
-c2star :: IxMap -> CCS -> CCS
+c2star :: IxMap -> Process -> Process
 
 c2star imap (Pfx (Evt (alfa,(One i))) ccs)
   = sumPrefixes imap alfa i $ c2star imap ccs
 
-c2star imap (Par ccss)
+c2star imap (Par [] ccss)
   = rstr (syncPre $ map (S.toList . prefixesOf) ccss)
-         $ Par $ map (c2star imap) ccss
+         $ Par [] $ map (c2star imap) ccss
 
 c2star imap (Sum ccss) = Sum $ map (c2star imap) ccss
 
@@ -367,7 +374,7 @@ c2star imap ccs = ccs -- 0, X
    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
 \end{eqnarray*}
 \begin{code}
-sumPrefixes :: IxMap -> Name -> Int -> CCS -> CCS
+sumPrefixes :: IxMap -> Name -> Int -> Process -> Process
 sumPrefixes imap alfa i ccs
   = case M.lookup (bar alfa) imap of
       Nothing  ->  Pfx (Evt (alfa,One i)) ccs
