@@ -13,6 +13,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Control
 import Syntax
+import Semantics
 
 --import Debug.Trace
 --dbg msg x = trace (msg++show x) x
@@ -259,11 +260,11 @@ Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
    conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
 \end{eqnarray*}
 
-\begin{eqnarray*}
-   tautail(P) &\defeq&
-     \{ P' \mid P \trans\tau P' \} \cup \{\miracle\}
-\end{eqnarray*}
-We abuse notation a little: $\miracle$ is the unit of $\sqcap$.
+For $P$ a CCS process, recall ``after-tau'':
+$
+   \circ\tau(P) \defeq
+     \{ P' \mid P \trans\tau P' \}
+$.
 
 
 \begin{eqnarray*}
@@ -275,7 +276,7 @@ We abuse notation a little: $\miracle$ is the unit of $\sqcap$.
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
 \\ tl(P_1+P_2) &\defeq&
    (tl(P_1) \Box tl(P_2))
-   \sqcap  \{ tautail(tl(P_1)) \cup tautail(tl(P_2)) \}
+   \sqcap  \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
 \end{eqnarray*}
 \begin{code}
 tl :: Process -> Process

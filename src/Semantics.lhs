@@ -7,6 +7,8 @@ LICENSE: BSD3, see file LICENSE at ccs2csp root
 \begin{code}
 module Semantics where
 
+import Data.Set (Set)
+import qualified Data.Set as S
 import Control.Monad
 import Syntax
 
@@ -38,7 +40,7 @@ From [CC],p46
   \infer{\alpha,\overline\alpha \notin L \\ E \trans\alpha E'}
         {E\setminus L \trans\alpha E'\setminus L} \; Res
   \and
-  \infer{E \trans\alpha E'}{E[f]\trans{f(\alpha)}E'[f]} \; Ren
+  \infer{E \trans\alpha E'}{E[f]\trans{f(\alpha)}E'[f]} \; Rel
   \and
   \infer{A \defeq P \\ P \trans\alpha P'}
         {A \trans\alpha P'} \; Con
@@ -50,7 +52,26 @@ we replace $Com_3$ with
   \infer{E \trans\ell E' \\ F \trans{\overline\ell} F'}
         {E|F \trans{\tau[\ell|\overline\ell]} E'|F'}
 \]
-
+For now,
+we want a function ("after-tau") that returns a list of processes that can result from a tau event.
+\begin{eqnarray*}
+   \circ\tau &:& Process \fun Process^*
+\\ \circ\tau(P) &\defeq& \{ P' \mid P \trans\tau P' \}
+\end{eqnarray*}
+\begin{code}
+-- isCCS
+afterTau :: Process -> [Process]
+afterTau Zero              =  []
+afterTau (Pfx T ccs)       =  [ccs]
+afterTau (Pfx (T' _) ccs)  =  [ccs] -- considered a tau...?
+afterTau (Pfx _ ccs)       =  []
+afterTau (Sum ccss)        =  ccss
+afterTau (Par nms ccss)    =  concat $ map afterTau ccss
+afterTau (Rstr es ccs)     =  afterTau ccs
+afterTau (Ren s2s ccs)     =  afterTau ccs
+afterTau (Rec s ccs)       =  afterTau ccs
+afterTau _                 =  [] -- the rest, incl CSP stuff
+\end{code}
 
 \subsubsection{Equational Laws}
 
@@ -191,6 +212,12 @@ Corrollary 7 ([CC, p70]])
    \quad \IF f\restrict(L \cup \bar L)\text{ is 1-1, where } L=\mathcal L(P|Q)
 \end{eqnarray}
 
+corollary 11 [CC, p81]
+\begin{eqnarray}
+   P[b/a] &=& P \quad \IF a,\bar a \notin \mathcal L(P)
+\\ P\hide a &=& P[b/a]\hide b \quad \IF b,\bar b \notin \mathcal L(P)
+\\ P\hide a[b/c] &=& P[b/c]\hide a \quad \IF b,c \neq a
+\end{eqnarray}
 
 \subsubsection{Non-Laws}
 
@@ -329,9 +356,3 @@ From Schneider
   \infer{N = P \\ P \trans\mu P'}
         {N \trans\mu P'} \; Rec
 \end{mathpar}
-For now,
-we want a function that returns a set of all possible initial events
-for a CSP process.
-\begin{code}
-initEventsCSP :: Process -> Set Prefix
-\end{code}
