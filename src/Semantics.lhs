@@ -14,7 +14,9 @@ import Syntax
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
-\subsection{Operational Semantics}
+\subsection{CCS Semantics}
+
+\subsubsection{Operational Semantics}
 
 
 From [CC],p46
@@ -36,7 +38,7 @@ From [CC],p46
   \infer{\alpha,\overline\alpha \notin L \\ E \trans\alpha E'}
         {E\setminus L \trans\alpha E'\setminus L} \; Res
   \and
-  \infer{E \trans\alpha E'}{E[f]\trans{f(\alpha)}E'[f]} \; Rel
+  \infer{E \trans\alpha E'}{E[f]\trans{f(\alpha)}E'[f]} \; Ren
   \and
   \infer{A \defeq P \\ P \trans\alpha P'}
         {A \trans\alpha P'} \; Con
@@ -50,7 +52,7 @@ we replace $Com_3$ with
 \]
 
 
-\subsection{Equational Laws}
+\subsubsection{Equational Laws}
 
 From [CC],pp62--80.
 
@@ -108,7 +110,7 @@ Corrollary 3 ([CC],p63)
 \end{eqnarray}
 
 \newpage
-\subsection{Trace Semantics}
+\subsubsection{Trace Semantics}
 
 We can define traces for CCS terms,
 in a number of ways.
@@ -182,7 +184,56 @@ returns all valid interleavings of $s$ and $t$.
 \textsf{The definition given here gives the same results
 as the usual derivation of $trc$ from the operational semantics.}
 
-\begin{code}
-semantics :: String
-semantics = "Semantics"
-\end{code}
+\subsection{CSP Semantics}
+
+\subsubsection{Operational Semantics}
+
+From Schneider
+
+\begin{mathpar}
+  \infer{ }{(a \then P)\; \trans a \; P} \; Act
+  \and
+  \infer{ }{SKIP \; \trans\surd \; STOP} \; Term
+  \and
+  \infer{i \in \{1,2\} \\ P_i \trans a P'_i}
+        {P_1 \Box P_2 \trans a P'_i}
+        \; ExtC_1
+  \and
+  \infer{P_1 \trans\tau P'_1}
+        {P_1 \Box P_2 \trans\tau P'_1 \Box P_2
+         \\
+         P_2 \Box P_1 \trans\tau P_2 \Box P'_1
+        }
+        \; ExtC_2
+  \and
+  \infer{ }
+        {P_1 \sqcap P_2 \trans\tau P_1
+         \\
+         P_1 \sqcap P_2 \trans\tau P_2
+        }
+        \; IntC
+  \and
+  \infer{\mu \notin A^\surd \\ P_1 \trans\mu P'_1}
+        {P_1 \parallel_A P_2 \trans\mu P'_1 \parallel_A P_2
+         \\
+         P_2 \parallel_A P_1 \trans\mu P_2 \parallel_A P'_1
+        }
+        \; Par_1
+  \and
+  \infer{\mu \in A^\surd \\ P_1 \trans\mu P'_1 \\ P_2 \trans\mu P'_2}
+        {P_1 \parallel_A P_2 \trans\mu P'_1 \parallel_A P'_2} \; Par_2
+  \and
+  \infer{a \in A \\ P \trans a P'}
+        {P \hide A \trans\tau P' \hide A} \; Hid_1
+  \and
+  \and
+  \infer{a \notin A \\ P \trans a P'}
+        {P \hide A \trans a P' \hide A} \; Hid_2
+  \and
+  \infer{P \trans a P'}{f(P) \trans{f(a)} f(P')} \; Ren_1
+  \and
+  \infer{P \trans\tau P'}{f(P) \trans\tau f(P')} \; Ren_2
+  \and
+  \infer{N = P \\ P \trans\mu P'}
+        {N \trans\mu P'} \; Rec
+\end{mathpar}
