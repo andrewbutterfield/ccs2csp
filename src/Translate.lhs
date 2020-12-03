@@ -269,7 +269,7 @@ We abuse notation a little: $\miracle$ is the unit of $\sqcap$.
 \begin{eqnarray*}
    tl(0) &\defeq& STOP
 \\ tl(\tau.P) &\defeq& tl(P)
-\\ tl(a.P) &\defeq& tl(a) \then tl(P)
+\\ tl(a.P) &\defeq& tla(a) \then tl(P)
 \\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{\Alf P\cap{\Alf Q}} tl(Q)
 \\ tl(P\restrict A) &\defeq& tl(P) \parallel_A STOP
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
@@ -277,6 +277,26 @@ We abuse notation a little: $\miracle$ is the unit of $\sqcap$.
    (tl(P_1) \Box tl(P_2))
    \sqcap  \{ tautail(tl(P_1)) \cup tautail(tl(P_2)) \}
 \end{eqnarray*}
+\begin{code}
+tl :: Process -> Process
+tl (Pfx pfx@(Evt _) ccs) = Pfx (tla pfx) $ tl ccs
+tl (Pfx _ ccs) = tl ccs
+tl ccs = ccs
+\end{code}
+
+
+Note that $tla(a)$ removes any bar over $a$,
+and merges any indices into the name string.
+\begin{code}
+tla :: Prefix -> Prefix
+tla (Evt evt)  =  Evt $ tle evt
+tle (nm,ix)    = (Std (tln nm++tli ix),None)
+tln (Std nm)   =  nm
+tln (Bar nm)   =  nm
+tli None       =  ""
+tli (One i)    =  "_"++show i
+tli (Two i j)  =  "_"++show i++"_"++show j
+\end{code}
 
 
 \begin{eqnarray*}

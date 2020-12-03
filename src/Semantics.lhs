@@ -109,6 +109,97 @@ Corrollary 3 ([CC],p63)
    P+\tau.(P+Q) &=& \tau.(P+Q)
 \end{eqnarray}
 
+\subsubsection{Recursion}
+
+$X$ is sequential in $E$ if it occurs only inside Prefix or Sum.
+
+$X$ is guarded in $E$ if each occurrence inside some $\ell.F$ within $E$.
+
+\subsubsection{Expansion Law}
+
+[CC, p69]
+\begin{eqnarray}
+   P &\equiv& (P_1[f_1]|\dots|P_n[f_n])\hide L
+\\ P &=& \Sigma
+         \left\{
+           f_i(\alpha).(P_1[f_1]|\dots|P'_i[f_i]|\dots|P_n[f_n])\hide L :
+         \right. \nonumber
+\\   & & \left. \qquad P_i \trans{\alpha_i} P'_i, f_i(\alpha)\neq L \cup \bar L
+         \right\} \nonumber
+\\   &+& \Sigma
+         \left\{
+           \tau.(P_1[f_1]|\dots|P'_i[f_i]|\dots|P'_j[f_j]|\dots|P_n[f_n])\hide L :
+         \right. \nonumber
+\\   & & \left. \qquad P_i \trans{\ell_1} P'_i,
+                       P_j \trans{\ell_2} P'_j,
+                       f_i(\ell_1) = \bar{f_j(\ell_2)},
+                       i < j
+         \right\}
+\\ P &\equiv& (P_1|\dots|P_n)\hide L
+\\ P &=& \Sigma
+      \left\{
+        f_i(\alpha).(P_1|\dots|P'_i|\dots|P_n)\hide L :
+          P_i \trans{\alpha_i} P'_i, \alpha\neq L \cup \bar L
+       \right\} \nonumber
+\\   &+& \Sigma
+      \left\{
+        \tau.(P_1|\dots|P'_i|\dots|P'_j|\dots|P_n)\hide L :
+      \right. \nonumber
+\\   & & \left. \qquad P_i \trans{\ell} P'_i,
+                    P_j \trans{\bar\ell} P'_j,
+                    i < j
+      \right\}
+\end{eqnarray}
+
+Corrollary 7 ([CC, p70]])
+\begin{eqnarray}
+   (\alpha.Q)\hide L
+   &=& 0 \IF \alpha \in L\cup\bar L, \OTHERWISE \alpha.Q\hide L
+\\ (\alpha.Q)[f] &= f(\alpha).Q[f]
+\\ (Q+R)\hide L &=& Q\hide L + R\hide L
+\\ (Q+R)[f] &=& Q[f] + R[f]
+\end{eqnarray}
+
+\subsubsection{Composition Laws}
+
+[CC, p80]
+\begin{eqnarray}
+   P|Q &=& Q|P
+\\ P|(Q|R) &=& (P|Q)|R
+\\ P|0 &=& P
+\end{eqnarray}
+
+\subsubsection{Restriction Laws}
+
+[CC, p80]
+\begin{eqnarray}
+   P\L &=& P \quad \IF \mathcal L(P) \cap (L \cup \bar L) = \emptyset
+\\ P\hide K\hide L &=& P\hide(K \cup L)
+\\ P[f]\hide L &=& P\hide f^{-1}(L)[f]
+\\ (P|Q)\hide L &=& P\hide L | Q\hide L
+  \quad \IF \mathcal L(P) \cap \bar{\mathcal L(Q)} \cap (L\cup\bar L) = \emptyset
+\end{eqnarray}
+
+\subsubsection{Relabelling Laws}
+
+[CC, p80]
+\begin{eqnarray}
+   P[Id] &=& P
+\\ P[f] &=& P[f'] \quad \IF f\restrict\mathcal L(P) = f'\restrict\mathcal L(P)
+\\ P[f][f'] &=& P[f' \circ f]
+\\ (P|Q)[f] &=& P[f] | Q[f]
+   \quad \IF f\restrict(L \cup \bar L)\text{ is 1-1, where } L=\mathcal L(P|Q)
+\end{eqnarray}
+
+
+\subsubsection{Non-Laws}
+
+[CC,p64]
+\begin{eqnarray*}
+   \tau.P &\neq& P
+\\ a.(P+Q) &\neq& a.P + a.Q
+\end{eqnarray*}
+
 \newpage
 \subsubsection{Trace Semantics}
 
@@ -184,6 +275,7 @@ returns all valid interleavings of $s$ and $t$.
 \textsf{The definition given here gives the same results
 as the usual derivation of $trc$ from the operational semantics.}
 
+\newpage
 \subsection{CSP Semantics}
 
 \subsubsection{Operational Semantics}
@@ -237,3 +329,9 @@ From Schneider
   \infer{N = P \\ P \trans\mu P'}
         {N \trans\mu P'} \; Rec
 \end{mathpar}
+For now,
+we want a function that returns a set of all possible initial events
+for a CSP process.
+\begin{code}
+initEventsCSP :: Process -> Set Prefix
+\end{code}
