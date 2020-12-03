@@ -11,28 +11,11 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
+import Control
 import Syntax
 
 --import Debug.Trace
 --dbg msg x = trace (msg++show x) x
-\end{code}
-
-\subsection{Control}
-
-
-This generic control code belongs in a distinct module.
-
-\begin{code}
-paramwalk :: (i -> i) -> (i -> a -> b) -> i -> [a] -> [b]
-paramwalk _ _ _ [] = []
-paramwalk upd f i (a:as) = f i a : paramwalk upd f (upd i) as
-
-paramileave :: (i -> a -> (b,i)) -> i -> [a] -> ([b],i)
-paramileave _ i [] = ([],i)
-paramileave f i (a:as)
-  = let (a',i1)   =  f i a
-        (as',i')  =  paramileave f i1 as
-    in (a':as',i')
 \end{code}
 
 
