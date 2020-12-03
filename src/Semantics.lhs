@@ -1,14 +1,15 @@
 \section{Semantics}
 \begin{verbatim}
-Copyright  Andrew Buttefield (c) 2017
+Copyright  Andrew Buttefield (c) 2020
 
-LICENSE: BSD3, see file LICENSE at reasonEq root
+LICENSE: BSD3, see file LICENSE at ccs2csp root
 \end{verbatim}
 \begin{code}
 module Semantics where
 
 import Control.Monad
 import Syntax
+
 --import Debug.Trace
 --dbg msg x = trace (msg++show x) x
 \end{code}
