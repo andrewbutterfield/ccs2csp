@@ -130,18 +130,44 @@ and
 CSP $\Box$.
 \begin{code}
 data Process
-  = Zero
-  | Skip
-  | Pfx Prefix Process
-  | Seq [Process]
-  | Sum [Process]
-  | Ext [Process]
-  | Par [String] [Process]
-  | Rstr [Event] Process
-  | Ren RenFun Process
-  | PVar String
-  | Rec String Process
+  = Zero                    -- both  0, STOP
+  | Skip                    -- CSP SKIP
+  | Pfx Prefix Process      -- both, Evt (name,None) only in CSP
+  | Seq [Process]           -- CSP ;
+  | Sum [Process]           -- both + |~|
+  | Ext [Process]           -- CSP []
+  | Par [String] [Process]  -- both  | |..|
+  | Rstr [Event] Process    -- both |' \
+  | Ren RenFun Process      -- both  _[f]  f(_)
+  | PVar String             -- both
+  | Rec String Process      -- both
   deriving (Eq,Ord,Read)
+
+isCCS :: Process -> Bool
+isCCS Skip            =  False
+isCCS (Seq _)         =  False
+isCCS (Ext _)         =  False
+isCCS (Pfx _ ccs)     =  isCCS ccs
+isCCS (Sum ccss)      =  all isCCS ccss
+isCCS (Par nms ccss)  =  null nms && all isCCS ccss
+isCCS (Rstr _ ccs)    =  isCCS ccs
+isCCS (Ren _ ccs)     =  isCCS ccs
+isCCS (Rec _ ccs)     =  isCCS ccs
+isCCS _               =  True  -- Zero, PVar
+
+isCSP :: Process -> Bool
+isCSP (Pfx pfx ccs)  =  isCSPPfx pfx && isCSP ccs
+isCSP (Seq ccss)     =  all isCSP ccss
+isCSP (Sum ccss)     =  all isCSP ccss
+isCSP (Ext ccss)     =  all isCSP ccss
+isCSP (Par _ ccss)   =  all isCSP ccss
+isCSP (Rstr _ ccs)   =  isCSP ccs
+isCSP (Ren _ ccs)    =  isCSP ccs
+isCSP (Rec _ ccs)    =  isCSP ccs
+isCSP _              =  True  -- Zero, Skip, PVar
+
+isCSPPfx (Evt (_,None))  =  True
+isCSPPfx _               =  False
 
 -- f s2s Zero
 -- f s2s Skip
