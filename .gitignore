@@ -1,1 +1,10 @@
 MAIN.pdf
+.stack-work
+MAIN.aux
+MAIN.bbl
+MAIN.blg
+MAIN.fdb_latexmk
+MAIN.fls
+MAIN.log
+MAIN.synctex.gz
+MAIN.toc
