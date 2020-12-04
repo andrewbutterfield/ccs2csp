@@ -8,3 +8,4 @@ MAIN.fls
 MAIN.log
 MAIN.synctex.gz
 MAIN.toc
+*.out
