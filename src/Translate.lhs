@@ -52,24 +52,25 @@ iFrom i ccs = (ccs,i)
 
 iPfx :: Int -> Prefix -> Prefix
 iPfx i T = T
-iPfx i (Evt e) = Evt (ePfx i e)
+iPfx i (Lbl e) = Lbl (ePfx i e)
 iPfx i pfx@(T' _) = error ("pre-indexing CCS term with tagged-tau "++show pfx)
+iPfx i pfx@(Evt _) = error ("pre-indexing CCS term with CSP prefix "++show pfx)
 
-ePfx :: Int -> Event -> Event
+ePfx :: Int -> IxLab -> IxLab
 ePfx i (nm,_) = (nm,One i)
 
-cameFrom :: [Event] -> Event -> Bool
+cameFrom :: [IxLab] -> IxLab -> Bool
 cameFrom es e = (root . fst) e `elem` map (root . fst) es
 \end{code}
 
 Given a CCS term, return a mapping from events
 to the set of indices associated with each event.
 \begin{code}
-type IxMap = Map Name (Set Index)
+type IxMap = Map Label (Set Index)
 indexMap :: Process -> IxMap
 indexMap = iMap M.empty
 
-iMap imap (Pfx (Evt (nm,i)) ccs)  =  iMap imap' ccs
+iMap imap (Pfx (Lbl (nm,i)) ccs)  =  iMap imap' ccs
                      where imap'  =  insMapping nm i imap
 iMap imap (Pfx  _ ccs)            =  iMap imap ccs
 iMap imap (Sum ccss)              =  iSeqMap imap ccss
@@ -82,7 +83,7 @@ iMap imap ccs                     =  imap
 iSeqMap imap []          =  imap
 iSeqMap imap (ccs:ccss)  =  let imap' = iMap imap ccs in iSeqMap imap' ccss
 
-insMapping :: Name -> Index -> IxMap -> IxMap
+insMapping :: Label -> Index -> IxMap -> IxMap
 insMapping nm i imap
   = M.insertWith S.union nm (S.singleton i) imap
 \end{code}
@@ -109,7 +110,7 @@ This has been revised considerably in [GEN v19 Note4].
 Note that $g^*(\{\},a_i) = \{a_i\}$.
 
 \begin{code}
-gs :: Set Event -> Set Event
+gs :: Set IxLab -> Set IxLab
 gs evts = evts `S.union` (S.unions (S.map (gsa2 evts) evts))
 
 gsa1 = S.singleton
@@ -177,7 +178,7 @@ $\{a_i,\bar a_j\} \subseteq B$.
 \end{eqnarray*}
 
 \begin{code}
-gsp :: Set Event -> Process -> Process
+gsp :: Set IxLab -> Process -> Process
 gsp _    Zero             =  Zero
 gsp _    v@(PVar _)       =  v
 gsp evts (Sum ccss)       =  Sum $ map (gsp evts) ccss
@@ -185,12 +186,12 @@ gsp evts (Rec x ccs)      =  Rec x $ gsp evts ccs
 gsp evts (Rstr evtl ccs)  =  Rstr (gse evts evtl) (gsp evts ccs)
 gsp evts (Ren f ccs)      =  Ren f $ gsp evts ccs
 gsp evts (Par [] csss)    =  Par [] $ walk (gpar evts) [] [] csss $ map alf csss
-gsp evts prfx@(Pfx (Evt alpha) ccs)
+gsp evts prfx@(Pfx (Lbl alpha) ccs)
                           =  Sum $ map (mkpre ccs') alpha'
   where
     ccs' = gsp evts ccs
     alpha' =  S.toList $ gsa evts alpha
-    mkpre p alpha = Pfx (Evt alpha) p
+    mkpre p alpha = Pfx (Lbl alpha) p
 gsp evts (Pfx evt ccs)    =  Pfx evt $ gsp evts ccs
 
 gsp _ csp  =  error ("Cannot gsp CSP syntax:("++show csp++")")
@@ -224,10 +225,10 @@ we see the following, simplified here a bit:
 Note that the recursion is under the iterated parallel,
 not enclosing it.
 \begin{code}
-ever :: Event -> Process
-ever evt = Rec "X" $ Pfx (Evt $ evtbar evt) $ PVar "X"
+ever :: IxLab -> Process
+ever evt = Rec "X" $ Pfx (Lbl $ evtbar evt) $ PVar "X"
 infixl 7 \\
-(\\) :: Process -> [Event] -> Process
+(\\) :: Process -> [IxLab] -> Process
 ccs \\ evtl  =  Rstr evtl $ Par [] (ccs:map ever evtl)
 \end{code}
 
@@ -280,7 +281,7 @@ $.
 \end{eqnarray*}
 \begin{code}
 tl :: Process -> Process
-tl (Pfx pfx@(Evt _) ccs) = Pfx (tla pfx) $ tl ccs
+tl (Pfx pfx@(Lbl _) ccs) = Pfx (tla pfx) $ tl ccs
 tl (Pfx _ ccs) = tl ccs
 tl ccs = ccs
 \end{code}
@@ -290,8 +291,7 @@ Note that $tla(a)$ removes any bar over $a$,
 and merges any indices into the name string.
 \begin{code}
 tla :: Prefix -> Prefix
-tla (Evt evt)  =  Evt $ tle evt
-tle (nm,ix)    = (Std (tln nm++tli ix),None)
+tla (Lbl (nm,ix))  =  Evt (tln nm++tli ix)
 tln (Std nm)   =  nm
 tln (Bar nm)   =  nm
 tli None       =  ""
@@ -354,7 +354,7 @@ ccs2star ccs
 
 c2star :: IxMap -> Process -> Process
 
-c2star imap (Pfx (Evt (alfa,(One i))) ccs)
+c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
   = sumPrefixes imap alfa i $ c2star imap ccs
 
 c2star imap (Par [] ccss)
@@ -378,16 +378,16 @@ c2star imap ccs = ccs -- 0, X
    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
 \end{eqnarray*}
 \begin{code}
-sumPrefixes :: IxMap -> Name -> Int -> Process -> Process
+sumPrefixes :: IxMap -> Label -> Int -> Process -> Process
 sumPrefixes imap alfa i ccs
   = case M.lookup (bar alfa) imap of
-      Nothing  ->  Pfx (Evt (alfa,One i)) ccs
+      Nothing  ->  Pfx (Lbl (alfa,One i)) ccs
       Just evts
         -> let alpha2s = map (mkSyncEvt alfa i) $ S.toList evts
            in Sum $ map (affix ccs) ((alfa,One i):alpha2s)
 
 mkSyncEvt alfa i (One j) = i2event alfa i j
-affix ccs e = Pfx (Evt e) ccs
+affix ccs e = Pfx (Lbl e) ccs
 \end{code}
 
 \begin{eqnarray*}
@@ -403,19 +403,19 @@ affix ccs e = Pfx (Evt e) ccs
    \{\alpha_{ij} \mid \alpha_i \in P_m, \bar\alpha_j \in P_n, m \neq n\}
 \end{eqnarray*}
 \begin{code}
-syncPre :: [[Prefix]] -> [Event]
+syncPre :: [[Prefix]] -> [IxLab]
 syncPre = concat . findSync syncPre1
 
 --
-syncPre1 :: [Prefix] -> [Prefix] -> [[Event]]
+syncPre1 :: [Prefix] -> [Prefix] -> [[IxLab]]
 syncPre1 ps1 ps2 = map (f ps1) ps2
  where f ps1 p2 = concat $ map (syncPre2 p2) ps1
 \end{code}
 
 \begin{code}
-syncPre2 :: Prefix -> Prefix -> [Event]
-syncPre2 (Evt (Std m,One i)) (Evt (Bar n,One j)) | m == n  =  syncE m i j
-syncPre2 (Evt (Bar m,One i)) (Evt (Std n,One j)) | m == n  =  syncE m i j
+syncPre2 :: Prefix -> Prefix -> [IxLab]
+syncPre2 (Lbl (Std m,One i)) (Lbl (Bar n,One j)) | m == n  =  syncE m i j
+syncPre2 (Lbl (Bar m,One i)) (Lbl (Std n,One j)) | m == n  =  syncE m i j
 syncPre2 _                   _                             =  []
 
 syncE s i j = [i2event (Std s) i j]

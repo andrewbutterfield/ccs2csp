@@ -15,19 +15,20 @@ import Data.List
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
-We making barring part of a name:
+We use CCS notion of ``label'' as basic.
+A CSP ``event'' is represented a \texttt{Std} label.
 \begin{code}
-data Name = Std String | Bar String deriving (Eq,Ord,Read)
+data Label = Std String | Bar String deriving (Eq,Ord,Read)
 
-instance Show Name where
+instance Show Label where
   show (Std s)  =  s
   show (Bar s)  =  s ++ "-bar"
 
-root :: Name -> String
+root :: Label -> String
 root (Std s)  =  s
 root (Bar s)  =  s
 
-bar :: Name -> Name
+bar :: Label -> Label
 bar (Std s)  =  Bar s
 bar (Bar s)  =  Std s
 \end{code}
@@ -46,42 +47,43 @@ instance Show Index where
 \end{code}
 
 \begin{code}
-type Event = (Name, Index)
+type IxLab = (Label, Index)
 
-event :: Name -> Event
-event nm = (nm,None)
+event :: Label -> IxLab
+event ell = (ell,None)
 
-ievent :: Name -> Int -> Event
-ievent nm i = (nm,One i)
+ievent :: Label -> Int -> IxLab
+ievent ell i = (ell,One i)
 
-i2event :: Name -> Int -> Int -> Event
-i2event nm i j -- reorder indices so first <= second
-  | i > j      =  (nm,Two j i)
-  | otherwise  =  (nm,Two i j)
+i2event :: Label -> Int -> Int -> IxLab
+i2event ell i j -- reorder indices so first <= second
+  | i > j      =  (ell,Two j i)
+  | otherwise  =  (ell,Two i j)
 
-showEvent :: Event -> String
-showEvent (Std nm,i) = nm ++ show i
-showEvent (Bar nm,i) = nm ++ show i ++ "-bar"
+showEvent :: IxLab -> String
+showEvent (Std ell,i) = ell ++ show i
+showEvent (Bar ell,i) = ell ++ show i ++ "-bar"
 
-evtbar :: Event -> Event
-evtbar (nm,i) = (bar nm,i)
+evtbar :: IxLab -> IxLab
+evtbar (ell,i) = (bar ell,i)
 \end{code}
 
 \begin{code}
 data Prefix
-  = T          -- tau
-  | Evt Event  -- a or a-bar
-  | T' String   -- t[a|a-bar]
+  = T           -- CSS     tau
+  | Lbl IxLab   -- CCS     a or a-bar
+  | T' String   -- CCStau  t[a|a-bar]
+  | Evt String  -- CSP     Event
   deriving (Eq,Ord,Read)
 
 instance Show Prefix where
   show T = "t"
-  show (Evt (Std s,i)) = s ++ show i
-  show (Evt (Bar s,i)) = s ++ show i ++ "-bar"
+  show (Lbl (Std s,i)) = s ++ show i
+  show (Lbl (Bar s,i)) = s ++ show i ++ "-bar"
   show (T' n) = show T ++ "["++n++"|"++n++"-bar]"
 
 pfxbar :: Prefix -> Prefix
-pfxbar (Evt e)  =  Evt $ evtbar e
+pfxbar (Lbl e)  =  Lbl $ evtbar e
 pfxbar pfx      =  pfx
 \end{code}
 
@@ -132,12 +134,12 @@ CSP $\Box$.
 data Process
   = Zero                    -- both  0, STOP
   | Skip                    -- CSP SKIP
-  | Pfx Prefix Process      -- both, Evt (name,None) only in CSP
+  | Pfx Prefix Process      -- both, Evt for CSP, others for CCS
   | Seq [Process]           -- CSP ;
   | Sum [Process]           -- both + |~|
   | Ext [Process]           -- CSP []
   | Par [String] [Process]  -- both  | |..|
-  | Rstr [Event] Process    -- both |' \
+  | Rstr [IxLab] Process    -- both |' \
   | Ren RenFun Process      -- both  _[f]  f(_)
   | PVar String             -- both
   | Rec String Process      -- both
@@ -166,7 +168,7 @@ isCSP (Ren _ ccs)    =  isCSP ccs
 isCSP (Rec _ ccs)    =  isCSP ccs
 isCSP _              =  True  -- Zero, Skip, PVar
 
-isCSPPfx (Evt (_,None))  =  True
+isCSPPfx (Lbl (_,None))  =  True
 isCSPPfx _               =  False
 
 -- f s2s Zero
@@ -184,7 +186,7 @@ isCSPPfx _               =  False
 \end{code}
 
 \begin{code}
-renameEvt :: RenFun -> Event -> Event
+renameEvt :: RenFun -> IxLab -> IxLab
 renameEvt s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
 renameEvt s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
 
@@ -195,7 +197,7 @@ renameStr s ((f,t):s2s)
 \end{code}
 
 \begin{code}
-alf :: Process -> Set Event
+alf :: Process -> Set IxLab
 alf Zero           =  S.empty
 alf Skip           =  S.empty
 alf (Pfx pfx ccs)  =  alfPfx pfx `S.union` alf ccs
@@ -208,7 +210,7 @@ alf (Ren s2s ccs)  =  S.map (renameEvt s2s) $ alf ccs
 alf (PVar s)       =  S.empty
 alf (Rec s ccs)    =  alf ccs
 
-alfPfx (Evt evt)  =  S.singleton evt
+alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
 \end{code}
 
@@ -261,12 +263,12 @@ instance Show Process where
         showRenFun s2s .
         showString "]"
 
-  showsPrec p (PVar nm) = showString nm
+  showsPrec p (PVar ell) = showString ell
 
-  showsPrec p (Rec nm ccs)
+  showsPrec p (Rec ell ccs)
     = showParen True $
         showString "mu " .
-        showString nm .
+        showString ell .
         showString " @ " .
         showsPrec 0 ccs
 \end{code}
@@ -338,7 +340,7 @@ cpar [ccs] = ccs
 cpar ccss = Par [] ccss
 
 
-rstr :: [Event] -> Process -> Process
+rstr :: [IxLab] -> Process -> Process
 rstr [] ccs = ccs
 rstr es ccs = Rstr es ccs
 
@@ -372,20 +374,21 @@ doRename s2s (Sum ccss)      =  Sum $ map (doRename s2s) ccss
 doRename s2s (Seq ccss)      =  Seq $ map (doRename s2s) ccss
 doRename s2s (Ext ccss)      =  Ext $ map (doRename s2s) ccss
 doRename s2s (Par nms ccss)  =  Par (map s2s nms) $ map (doRename s2s) ccss
-doRename s2s (Rstr es ccs)   =  Rstr (map (renEvent s2s) es) $ doRename s2s ccs
+doRename s2s (Rstr es ccs)   =  Rstr (map (renIxLab s2s) es) $ doRename s2s ccs
 doRename s2s (Ren s2s' ccs)  =  doRename s2s (doRename (endo s2s') ccs)
 doRename s2s (Rec s ccs)     =  Rec s $ doRename s2s ccs
 doRename _   ccs             = ccs
 
 renPfx :: (String -> String) -> Prefix -> Prefix
-renPfx _ T          =  T
-renPfx s2s (T' s)   =  T' $ s2s s
-renPfx s2s (Evt e)  =  Evt $ renEvent s2s e
+renPfx _ T            =  T
+renPfx s2s (T' s)     =  T' $ s2s s
+renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell
+renPfx s2s (Evt e)    =  Evt $ s2s e
 
-renEvent :: (String -> String) -> Event -> Event
-renEvent s2s (nm,i)  =  (renName s2s nm,i)
+renIxLab :: (String -> String) -> IxLab -> IxLab
+renIxLab s2s (ell,i)  =  (renName s2s ell,i)
 
-renName :: (String -> String) -> Name -> Name
-renName s2s (Std nm)  =  Std $ s2s nm
-renName s2s (Bar nm)  =  Bar $ s2s nm
+renName :: (String -> String) -> Label -> Label
+renName s2s (Std ell)  =  Std $ s2s ell
+renName s2s (Bar ell)  =  Bar $ s2s ell
 \end{code}

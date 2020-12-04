@@ -24,8 +24,8 @@ import Semantics
 Milners ``Comms and Conc'' book.
 \begin{code}
   -- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
-na = Std "a" ; ea = (na,None);  a = Evt ea
-nb = Std "b" ; b = Evt (nb,None)
+na = Std "a" ; ea = (na,None);  a = Lbl ea
+nb = Std "b" ; b = Lbl (nb,None)
 r = PVar "R"
 p = PVar "P"
 ell = (Std "L",None)

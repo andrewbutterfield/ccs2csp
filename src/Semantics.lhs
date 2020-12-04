@@ -53,7 +53,8 @@ we replace $Com_3$ with
         {E|F \trans{\tau[\ell|\overline\ell]} E'|F'}
 \]
 For now,
-we want a function ("after-tau") that returns a list of processes that can result from a tau event.
+we want a function ("after-tau")
+that returns a list of processes that can result from a tau event.
 \begin{eqnarray*}
    \circ\tau &:& Process \fun Process^*
 \\ \circ\tau(P) &\defeq& \{ P' \mid P \trans\tau P' \}
@@ -61,16 +62,75 @@ we want a function ("after-tau") that returns a list of processes that can resul
 \begin{code}
 -- isCCS
 afterTau :: Process -> [Process]
-afterTau Zero              =  []
 afterTau (Pfx T ccs)       =  [ccs]
 afterTau (Pfx (T' _) ccs)  =  [ccs] -- considered a tau...?
-afterTau (Pfx _ ccs)       =  []
 afterTau (Sum ccss)        =  ccss
-afterTau (Par nms ccss)    =  concat $ map afterTau ccss
+afterTau (Par [] ccss)     =  map (Par []) $ parBodiesAfterTaus ccss
 afterTau (Rstr es ccs)     =  afterTau ccs
 afterTau (Ren s2s ccs)     =  afterTau ccs
 afterTau (Rec s ccs)       =  afterTau ccs
 afterTau _                 =  [] -- the rest, incl CSP stuff
+\end{code}
+
+A parallel can produce a tau event in two ways:
+(i) one of its processes performs a tau;
+or (ii) two of its processes comunicate.
+\begin{code}
+parBodiesAfterTaus :: [Process] -> [[Process]]
+parBodiesAfterTaus ccss
+  =  parBodiesAfterOwnTaus ccss ++ parBodiesAfterComTaus ccss
+\end{code}
+
+Given $P_1 | \dots | P_i | \dots | P_n$,
+for each $i \in 1\dots n$, we compute $\circ\tau(P_i)$.
+For each $P'_j$ in  $\circ\tau(P_i)$ we construct
+$P_1 | \dots | P'_j | \dots | P_n$.
+\begin{code}
+parBodiesAfterOwnTaus :: [Process] -> [[Process]]
+parBodiesAfterOwnTaus _ = []
+\end{code}
+
+Given $P_1 | \dots | P_i | \dots | P_j | \dots | P_n$,
+for each $i,j \in 1\dots n, i < j$ (w.l.o.g.),
+we compute $(\circ\ell(P_i),\circ\bar\ell(P_i))$,
+for every pair $(\ell,\bar\ell)$
+where $\ell \in \Alf(P_i)$ and $\bar\ell \in \Alf(P_j)$.
+For every pair $(P'_m,P'_n)$ so generated,
+we construct
+$P_1 | \dots | P'_m | \dots | P'_n | \dots | P_n$.
+\begin{code}
+parBodiesAfterComTaus :: [Process] -> [[Process]]
+parBodiesAfterComTaus _ = []
+\end{code}
+
+The above requires us to also provide a function ``after-label''
+that returns a list of processes that can result from a specified label event.
+\begin{eqnarray*}
+   \circ\ell &:& Process \fun Process^*
+\\ \circ\ell(P) &\defeq& \{ P' \mid P \trans\ell P' \}
+\end{eqnarray*}
+\begin{code}
+-- isCCS
+afterEvt :: IxLab -> Process -> [Process]
+afterEvt evt (Pfx (Lbl evt') ccs)
+  | evt == evt'                =  [ccs]
+afterEvt evt (Sum ccss)        =  concat $ map (afterEvt evt) ccss
+afterEvt evt (Par [] ccss)     =  map (Par []) $ parBodiesAfterEvts ccss
+afterEvt evt (Rstr es ccs)
+  | not (evt `elem` es)        =  afterEvt evt ccs
+afterEvt evt (Ren s2s ccs)     =  afterEvt evt $ doRename (endo s2s) ccs
+afterEvt evt (Rec s ccs)       =  afterEvt evt ccs
+afterEvt evt _                 =  [] -- the rest, incl CSP stuff
+\end{code}
+
+Given $P_1 | \dots | P_i | \dots | P_n$,
+for each $i \in 1\dots n$, and each $\ell \in \Alf(P_i)$,
+we compute $\circ\ell(P_i)$.
+For each $P'_j$ in  $\circ\ell(P_i)$ we construct
+$P_1 | \dots | P'_j | \dots | P_n$.
+\begin{code}
+parBodiesAfterEvts :: [Process] -> [[Process]]
+parBodiesAfterEvts _ = []
 \end{code}
 
 \subsubsection{Equational Laws}
@@ -252,7 +312,7 @@ Here is the full trace set version%
 }
 :
 \begin{eqnarray*}
-   trc &:& CCS \rightarrow \Set (Event^\omega)
+   trc &:& CCS \rightarrow \Set (IxLab^\omega)
 \\ trc(0) &\defeq& \{\nil\}
 \\ trc(\alpha.P)
    &\defeq&
@@ -282,7 +342,7 @@ Here is the full trace set version%
 Here the interesting function is one on traces: $s|t$
 returns all valid interleavings of $s$ and $t$.
 \begin{eqnarray*}
-   \_|\_ &:& (Event^\omega)^2 \fun \Set (Event^\omega)
+   \_|\_ &:& (IxLab^\omega)^2 \fun \Set (IxLab^\omega)
 \\ \nil|t &\defeq& \{t\}
 \\ t|nil &\defeq& \{t\}
 \\ (\alpha:t_1)|(\bar\alpha:t_2)
