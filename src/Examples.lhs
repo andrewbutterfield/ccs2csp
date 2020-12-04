@@ -114,3 +114,41 @@ g_bAndaIabar = gsp0 i_bAndaIabar
 -- ( a1 \restrict a1 |  a2-bar)[g*,0]
     -- -->  (a1+a12)\restrict a1,a12 | a2-bar + a12-bar
 \end{code}
+
+
+In [GEN v18, Def 2.1, p7] we have:
+\begin{eqnarray*}
+   P \hide A &\defeq& ( P \mid \mu X (\Pi_{} a.X))\restrict A
+\end{eqnarray*}
+
+Looking up the referecence ([16])  cited there (Milner)
+we see the following, simplified here a bit:
+\begin{eqnarray*}
+   Ever(\alpha) &=& \alpha.Ever(\alpha)
+\\ P \hide H &=&
+   ( P \mid Ever(\bar\ell_1) \mid \dots \mid Ever(\bar\ell_n)) \restrict H
+\\ && \where H =\{ \ell_1, \dots, \ell_n\}
+\\ P \hide H
+   &\defeq&
+   ( P \mid \Pi_{\ell \in H} (\mu X . \bar\ell . X) ) \restrict H
+\end{eqnarray*}
+Note that the recursion is under the iterated parallel,
+not enclosing it.
+\begin{code}
+ever :: IxLab -> Process
+ever evt = Rec "X" $ Pfx (Lbl $ evtbar evt) $ PVar "X"
+infixl 7 \\
+(\\) :: Process -> [IxLab] -> Process
+ccs \\ ilbls  =  Rstr ilbls $ Par [] (ccs:map ever ilbls)
+\end{code}
+
+Here we want to prove(?) that
+\begin{eqnarray*}
+\\ g^*(S,P \hide B) &=& g^*(S,P) \hide g^*(S\cup B,B)
+\end{eqnarray*}
+\begin{code}
+prop_gstar_hide evts ccs ilbls
+ = gsp evts (ccs \\ ilbls)
+   ==
+   gsp evts ccs \\ gsb (evts `S.union` S.fromList ilbls) ilbls
+\end{code}

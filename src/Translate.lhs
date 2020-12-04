@@ -1,4 +1,4 @@
-\section{Translate}
+ilbls\section{Translate}
 \begin{verbatim}
 Copyright  Andrew Buttefield (c) 2020
 
@@ -19,6 +19,11 @@ import Semantics
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
+This section is based mainly on
+(a fairly recent version of)
+the document ``From CCS to CSP'', by G. Ekembe N.,
+in file \texttt{CCS-Pi-extensions\_}$\langle$version$\rangle$\texttt{.pdf}
+hereinafter [GEN].
 
 \subsection{Pre-Indexing}
 
@@ -26,7 +31,7 @@ Here we attach single indices to every standard or barred event,
 numbered from 0 upwards.
 Currently we fail if tagged-taus are found.
 
-This is called $c2ix$ in [GEN v19 etc.]
+This is called $c2ix$ in [GEN]
 \begin{code}
 c2ix = indexNames
 
@@ -52,12 +57,12 @@ iFrom i ccs = (ccs,i)
 
 iPfx :: Int -> Prefix -> Prefix
 iPfx i T = T
-iPfx i (Lbl e) = Lbl (ePfx i e)
+iPfx i (Lbl e) = Lbl (iLbl i e)
 iPfx i pfx@(T' _) = error ("pre-indexing CCS term with tagged-tau "++show pfx)
 iPfx i pfx@(Evt _) = error ("pre-indexing CCS term with CSP prefix "++show pfx)
 
-ePfx :: Int -> IxLab -> IxLab
-ePfx i (nm,_) = (nm,One i)
+iLbl :: Int -> IxLab -> IxLab
+iLbl i (nm,_) = (nm,One i)
 
 cameFrom :: [IxLab] -> IxLab -> Bool
 cameFrom es e = (root . fst) e `elem` map (root . fst) es
@@ -88,79 +93,107 @@ insMapping nm i imap
   = M.insertWith S.union nm (S.singleton i) imap
 \end{code}
 
-\subsubsection{Using $g^*$ for Actions}
+\newpage
+\subsection{Using $g^*$ for Actions}
 
-This has been revised considerably in [GEN v19 Note4].
+Defs. 4.2, 4.1 and end of 4.3, in [GEN].
 
-\textbf{NOTE: we need to check this, look at Note7 (Dec 1st)}
+\begin{eqnarray*}
+   g\pi_2 &:& \Set(Act \times \Nat)\times (Act \times \Nat)
+              \fun
+              \Set(Act \times \Nat \times \Nat)
+\\ g\pi_2(S,a_i) &\defeq&
+   \{a_{ij} \mid \bar{a}_j \in S, i < j\}
+                 \cup \{a_{ji} \mid \bar{a}_j \in S, j < i\}
+\end{eqnarray*}
+We assume the input indexed labels have single indices only.
+\begin{code}
+gsa2 iCtxt (a,One i) = gsa2' a i $ S.toList iCtxt
+gsa2 _ e = error ("gsa2: not a singly indexed event "++show e)
+
+gsa2' a i [] = S.empty
+gsa2' a i ((a',One j):iCtxt)
+  |  a == bar a' && i /= j  =  S.insert (i2event a i j) $ gsa2' a i iCtxt
+gsa2' a i (_:iCtxt)          =  gsa2' a i iCtxt
+\end{code}
+
+We now have a series of overloadings of $g^*$
+\begin{eqnarray*}
+   g^* &:& \Set(Act \times \Nat)\times (Act \times \Nat)
+           \fun
+           \Set(Act \times \Nat)
+           \cup
+           \Set(Act \times \Nat \times \Nat)
+\\ g^*(S,a_i) &\defeq& \{a_i\} \cup g\pi_2(S,a_i)
+\end{eqnarray*}
+\begin{code}
+gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
+\end{code}
+
+\begin{eqnarray*}
+  g^* &:& \Set(Act \times \Nat)\times \Set(Act \times \Nat)
+          \fun
+          \Set(Act \times \Nat)
+\\ g^*(S,B) &defeq& \bigcup\{ g^*(S,a_i) \mid a_i \in B \}
+\end{eqnarray*}
+\begin{code}
+gsb iCtxt ilbls = concat $ map (S.toList . gsa2 iCtxt) ilbls
+\end{code}
+
+
 \begin{eqnarray*}
    g^* &:& \Set(Act \times \Nat)
            \fun
            \Set(Act \times \Nat)
            \cup
            \Set(Act \times \Nat \times \Nat)
-\\ g^*(S) &\defeq& A \cup \{a_{ij} \mid a_i, \bar{a}_j \in S, i < j\}
+\\ g^*(S) &\defeq& S \cup \{a_{ij} \mid a_i, \bar{a}_j \in S, i < j\}
                   \cup \{a_{ji} \mid a_i, \bar{a}_j \in S, j < i\}
-\\
-\\ g^*(S,a_i) &\defeq& \{a_i\} \cup g\pi2(S,a_i)
-\\ g\pi2(S,a_i) &\defeq&
-   \{a_{ij} \mid \bar{a}_j \in S, i < j\}
-                 \cup \{a_{ji} \mid \bar{a}_j \in S, j < i\}
 \end{eqnarray*}
-Note that $g^*(\{\},a_i) = \{a_i\}$.
-
 \begin{code}
 gs :: Set IxLab -> Set IxLab
-gs evts = evts `S.union` (S.unions (S.map (gsa2 evts) evts))
-
-gsa1 = S.singleton
-
-gsa2 evts evt@(a,One i) = gsa2' a i $ S.toList evts
-gsa2 _ e = error ("gsa2: not a singly indexed event "++show e)
-
-gsa2' a i [] = S.empty
-gsa2' a i ((a',One j):evtl)
-  |  a == bar a' && i /= j  =  S.insert (i2event a i j) $ gsa2' a i evtl
-gsa2' a i (_:evtl)          =  gsa2' a i evtl
-
-gsa evts a = gsa1 a `S.union` gsa2 evts a
+gs iCtxt = iCtxt `S.union` (S.unions (S.map (gsa2 iCtxt) iCtxt))
 \end{code}
 
-We assume the input events are single prefixes only.
 
-\subsubsection{Using $g^*$ for Processes}
+\newpage
+\subsection{Using $g^*$ for Processes}
 
+Def 4.3, pp19--20 [GEN].
 
-Based on [GEN v19 Note4] annot and [VK Note 4 Nov 2020]
-
-The notation in [VK] Note 4 uses $P[g^*,A]$ for the application
-of $g^*$ to process $P$ with ``context`` $A$.
-
-Now as revised in [GEN v19 Note5]
-
-\begin{quote}
-``
-Def. $P[g^*,A]$ is defined when $A \cap \Alf(P) = \emptyset$
-and
+We have a well-formedness criteria for restriction,
+in order for $g^*$ to work properly.
 \begin{eqnarray*}
-   0[g^*,A]  &\defeq& 0
-\\ P \mid Q [g^*,A]
+   wf(P\restrict B)
    &\defeq&
-   P[g^*,A \uplus \Alf(Q)] \mid Q [g^*,A \uplus \Alf(P)]
-\\ P \upharpoonright B [g^*,A]
-  &\defeq&
-  P[g^*,A] \upharpoonright g^*_A(B)
+   B \subseteq \Alf P
+   \land
+   \forall a_i \in B \bullet \{a_k \mid a_k \in \Alf P\} \subseteq B
 \end{eqnarray*}
-'' [VK, Note 4]
-\end{quote}
+\begin{code}
+wfRes :: Process -> Bool
+wfRes _ = error "wfRes NYI"
+\end{code}
 
-[GEN v19 Note 5] and meetimg discussion suggest
-the following invariant
+Type signature for process $g^*$:
+\begin{eqnarray*}
+   g^* &:& \Set(Act \times \Nat)\times Process
+           \fun
+           Process\\ pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
+\end{eqnarray*}
+\begin{code}
+gsp :: Set IxLab -> Process -> Process
+\end{code}
 
-Given $P\restrict B$, $B$ must be saturated w.r.t. $P$,
-i.e, if $\{a_i,\bar a_j\} \subseteq \Alf(P)$ then
-$\{a_i,\bar a_j\} \subseteq B$.
+Pre-condition for process $g^*$:
+\begin{eqnarray*}
+   pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
+\end{eqnarray*}
+\begin{code}
+pre_gsp iCtxt ccs  =  S.null (iCtxt `S.union` alf ccs)
+\end{code}
 
+Definition of process $g^*$:
 \begin{eqnarray*}
    g^*(S,0) &\defeq& 0
 \\ g^*(S,\alpha.P) &\defeq& \Sigma_{b \in g^*(S,\alpha)} b.g^*(S,P)
@@ -173,75 +206,39 @@ $\{a_i,\bar a_j\} \subseteq B$.
    % \cup
    % \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
-\
-\\ g^*(S,A) &\defeq& \{g^*(S,a) \mid a \in A \}
 \end{eqnarray*}
 
 \begin{code}
-gsp :: Set IxLab -> Process -> Process
-gsp _    Zero             =  Zero
-gsp _    v@(PVar _)       =  v
-gsp evts (Sum ccss)       =  Sum $ map (gsp evts) ccss
-gsp evts (Rec x ccs)      =  Rec x $ gsp evts ccs
-gsp evts (Rstr evtl ccs)  =  Rstr (gse evts evtl) (gsp evts ccs)
-gsp evts (Ren f ccs)      =  Ren f $ gsp evts ccs
-gsp evts (Par [] csss)    =  Par [] $ walk (gpar evts) [] [] csss $ map alf csss
-gsp evts prfx@(Pfx (Lbl alpha) ccs)
-                          =  Sum $ map (mkpre ccs') alpha'
-  where
-    ccs' = gsp evts ccs
-    alpha' =  S.toList $ gsa evts alpha
-    mkpre p alpha = Pfx (Lbl alpha) p
-gsp evts (Pfx evt ccs)    =  Pfx evt $ gsp evts ccs
-
+gsp _    Zero                  =  Zero
+gsp _    v@(PVar _)            =  v
+gsp iCtxt (Sum ccss)            =  Sum $ map (gsp iCtxt) ccss
+gsp iCtxt (Rec x ccs)           =  Rec x $ gsp iCtxt ccs
+gsp iCtxt (Rstr lbls ccs)       =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
+gsp iCtxt (Ren f ccs)           =  Ren f $ gsp iCtxt ccs
+gsp iCtxt (Par [] csss)         =  Par [] $ walk (gpar iCtxt) csss $ map alf csss
+gsp iCtxt (Pfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
+                                             (S.toList $ gsa iCtxt ilbl)
+gsp iCtxt (Pfx pfx ccs)         =  Pfx pfx $ gsp iCtxt ccs
 gsp _ csp  =  error ("Cannot gsp CSP syntax:("++show csp++")")
 
-walk gf _  _  []     []      =  []
-walk gf sp sa (p:ps) (a:as)  =  gf (sa++as) p  : walk gf (p:sp) (a:sa) ps as
+-- helpers
+gpar iCtxt p ilbls = gsp (S.unions $ iCtxt:ilbls) p
+mkpfx p lbl = Pfx (Lbl lbl) p
+\end{code}
 
-gpar evts evtsl p = gsp (S.unions $ evts:evtsl) p
-
+At the top-level, we start with a empty indexed label context:
+\begin{eqnarray*}
+   q^* &:& Process \fun Process
+\\ g^*(P) &\defeq& g^*(\emptyset,P)
+\end{eqnarray*}
+\begin{code}
+gsp0 :: Process -> Process
 gsp0 = gsp S.empty
-
-gse evts evtl = concat $ map (S.toList . gsa2 evts) evtl
 \end{code}
 
-In [GEN v18, Def 2.1, p7] we have:
-\begin{eqnarray*}
-   P \hide A &\defeq& ( P \mid \mu X (\Pi_{} a.X))\restrict A
-\end{eqnarray*}
+\newpage
+\subsection{Pre-Translation}
 
-Looking up the referecence ([16])  cited there (Milner)
-we see the following, simplified here a bit:
-\begin{eqnarray*}
-   Ever(\alpha) &=& \alpha.Ever(\alpha)
-\\ P \hide H &=&
-   ( P \mid Ever(\bar\ell_1) \mid \dots \mid Ever(\bar\ell_n)) \restrict H
-\\ && \where H =\{ \ell_1, \dots, \ell_n\}
-\\ P \hide H
-   &\defeq&
-   ( P \mid \Pi_{\ell \in H} (\mu X . \bar\ell . X) ) \restrict H
-\end{eqnarray*}
-Note that the recursion is under the iterated parallel,
-not enclosing it.
-\begin{code}
-ever :: IxLab -> Process
-ever evt = Rec "X" $ Pfx (Lbl $ evtbar evt) $ PVar "X"
-infixl 7 \\
-(\\) :: Process -> [IxLab] -> Process
-ccs \\ evtl  =  Rstr evtl $ Par [] (ccs:map ever evtl)
-\end{code}
-
-Here we want to prove(?) that
-\begin{eqnarray*}
-\\ g^*(S,P \hide B) &=& g^*(S,P) \hide g^*(S\cup B,B)
-\end{eqnarray*}
-\begin{code}
-prop_gstar_hide evts ccs evtl
- = gsp evts (ccs \\ evtl)
-   ==
-   gsp evts ccs \\ gse (evts `S.union` S.fromList evtl) evtl
-\end{code}
 
 \begin{eqnarray*}
    c4star(S,P) &\defeq& g^*(S,c2ix(P))
@@ -250,7 +247,7 @@ prop_gstar_hide evts ccs evtl
    c4star(S,P)\restrict \{g\pi_2(a_i)\mid a)i \in \Alf c2ix(P)\}
 \end{eqnarray*}
 \begin{code}
-c4star evts ccs = gsp evts $ c2ix ccs
+c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
 \end{code}
 
 \subsection{Translate toward CSP}
