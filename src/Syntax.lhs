@@ -131,41 +131,41 @@ CSP $;$;
 and
 CSP $\Box$.
 \begin{code}
-data Process
+data Proc                   -- which? CSS? CSP? both?
   = Zero                    -- both  0, STOP
   | Skip                    -- CSP SKIP
-  | Pfx Prefix Process      -- both, Evt for CSP, others for CCS
-  | Seq [Process]           -- CSP ;
-  | Sum [Process]           -- both + |~|
-  | Ext [Process]           -- CSP []
-  | Par [String] [Process]  -- both  | |..|
-  | Rstr [IxLab] Process    -- both |' \
-  | Ren RenFun Process      -- both  _[f]  f(_)
+  | Pfx Prefix Proc         -- both, Evt for CSP, others for CCS
+  | Seq Proc Proc           -- CSP ;
+  | Sum Proc Proc           -- both + |~|
+  | Ext Proc Proc           -- CSP []
+  | Par [String] Proc Proc  -- both  | |..|
+  | Rstr [IxLab] Proc       -- both |' \
+  | Ren RenFun Proc         -- both  _[f]  f(_)
   | PVar String             -- both
-  | Rec String Process      -- both
+  | Rec String Proc         -- both
   deriving (Eq,Ord,Read)
 
-isCCS :: Process -> Bool
-isCCS Skip            =  False
-isCCS (Seq _)         =  False
-isCCS (Ext _)         =  False
-isCCS (Pfx _ ccs)     =  isCCS ccs
-isCCS (Sum ccss)      =  all isCCS ccss
-isCCS (Par nms ccss)  =  null nms && all isCCS ccss
-isCCS (Rstr _ ccs)    =  isCCS ccs
-isCCS (Ren _ ccs)     =  isCCS ccs
-isCCS (Rec _ ccs)     =  isCCS ccs
-isCCS _               =  True  -- Zero, PVar
+isCCS :: Proc -> Bool
+isCCS Skip             =  False
+isCCS (Seq _ _)        =  False
+isCCS (Ext _ _)        =  False
+isCCS (Pfx _ prc)      =  isCCS prc
+isCCS (Sum p1 p2)      =  isCCS p1 && isCCS p2
+isCCS (Par nms p1 p2)  =  null nms && isCCS p1 && isCCS p2
+isCCS (Rstr _ prc)     =  isCCS prc
+isCCS (Ren _ prc)      =  isCCS prc
+isCCS (Rec _ prc)      =  isCCS prc
+isCCS _                =  True  -- Zero, PVar
 
-isCSP :: Process -> Bool
-isCSP (Pfx pfx ccs)  =  isCSPPfx pfx && isCSP ccs
-isCSP (Seq ccss)     =  all isCSP ccss
-isCSP (Sum ccss)     =  all isCSP ccss
-isCSP (Ext ccss)     =  all isCSP ccss
-isCSP (Par _ ccss)   =  all isCSP ccss
-isCSP (Rstr _ ccs)   =  isCSP ccs
-isCSP (Ren _ ccs)    =  isCSP ccs
-isCSP (Rec _ ccs)    =  isCSP ccs
+isCSP :: Proc -> Bool
+isCSP (Pfx pfx csp)  =  isCSPPfx pfx && isCSP csp
+isCSP (Seq p1 p2)    =  isCSP p1 && isCSP p2
+isCSP (Sum p1 p2)    =  isCSP p1 && isCSP p2
+isCSP (Ext p1 p2)    =  isCSP p1 && isCSP p2
+isCSP (Par _ p1 p2)  =  isCSP p1 && isCSP p2
+isCSP (Rstr _ csp)   =  isCSP csp
+isCSP (Ren _ csp)    =  isCSP csp
+isCSP (Rec _ csp)    =  isCSP csp
 isCSP _              =  True  -- Zero, Skip, PVar
 
 isCSPPfx (Lbl (_,None))  =  True
@@ -173,16 +173,16 @@ isCSPPfx _               =  False
 
 -- f s2s Zero
 -- f s2s Skip
--- f s2s (Pfx pfx ccs)
--- f s2s (Seq ccss)
--- f s2s (Sum ccss)
--- f s2s (Ext ccss)
--- f s2s (Par nms ccss)
--- f s2s (Rstr es ccs)
--- f s2s (Ren s2s ccs)
+-- f s2s (Pfx pfx prc)
+-- f s2s (Seq p1 p2)
+-- f s2s (Sum p1 p2)
+-- f s2s (Ext p1 p2)
+-- f s2s (Par nms p1 p2)
+-- f s2s (Rstr es prc)
+-- f s2s (Ren s2s prc)
 -- f s2s (PVar s)
--- f s2s (Rec s ccs)
--- f s2s ccs
+-- f s2s (Rec s prc)
+-- f s2s prc
 \end{code}
 
 \begin{code}
@@ -197,18 +197,18 @@ renameStr s ((f,t):s2s)
 \end{code}
 
 \begin{code}
-alf :: Process -> Set IxLab
+alf :: Proc -> Set IxLab
 alf Zero           =  S.empty
 alf Skip           =  S.empty
-alf (Pfx pfx ccs)  =  alfPfx pfx `S.union` alf ccs
-alf (Seq ccss)     =  S.unions $ map alf ccss
-alf (Sum ccss)     =  S.unions $ map alf ccss
-alf (Ext ccss)     =  S.unions $ map alf ccss
-alf (Par nms ccss) =  S.unions $ map alf ccss
-alf (Rstr es ccs)  =  alf ccs
-alf (Ren s2s ccs)  =  S.map (renameEvt s2s) $ alf ccs
+alf (Pfx pfx prc)  =  alfPfx pfx `S.union` alf prc
+alf (Seq p1 p2)     =  alf p1 `S.union` alf p2
+alf (Sum p1 p2)     =  alf p1 `S.union` alf p2
+alf (Ext p1 p2)     =  alf p1 `S.union` alf p2
+alf (Par nms p1 p2) =  alf p1 `S.union` alf p2
+alf (Rstr es prc)  =  alf prc
+alf (Ren s2s prc)  =  S.map (renameEvt s2s) $ alf prc
 alf (PVar s)       =  S.empty
-alf (Rec s ccs)    =  alf ccs
+alf (Rec s prc)    =  alf prc
 
 alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
@@ -228,57 +228,57 @@ pRstr = pRen;  pRstr' = pRstr+1
 
 
 \begin{code}
-instance Show Process where
+instance Show Proc where
 
   showsPrec p Zero  = showString "0"
 
   showsPrec p Skip  = showString "SKIP"
 
   showsPrec p (Pfx pfx Zero) = showString $ show pfx
-  showsPrec p (Pfx pfx ccs)
+  showsPrec p (Pfx pfx prc)
     = showParen (p > pPfx) $
         showString (show pfx) .
         showString "." .
-        showsPrec pPfx ccs
+        showsPrec pPfx prc
 
-  showsPrec p (Sum ccss) = showsInfix p pSum pSum' showSum ccss
+  showsPrec p (Sum p1 p2) = showsInfix p pSum pSum' showSum [p1,p2]
 
-  showsPrec p (Ext ccss) = showsInfix p pExt pExt' showExt ccss
+  showsPrec p (Ext p1 p2) = showsInfix p pExt pExt' showExt [p1,p2]
 
-  showsPrec p (Par nms ccss) = showsInfix p pPar pPar' (showPar nms) ccss
+  showsPrec p (Par nms p1 p2) = showsInfix p pPar pPar' (showPar nms) [p1,p2]
 
-  showsPrec p (Seq ccss) = showsInfix p pSeq pSeq' showSeq ccss
+  showsPrec p (Seq p1 p2) = showsInfix p pSeq pSeq' showSeq [p1,p2]
 
-  showsPrec p (Rstr [] ccs) = showsPrec p ccs
-  showsPrec p (Rstr es ccs)
+  showsPrec p (Rstr [] prc) = showsPrec p prc
+  showsPrec p (Rstr es prc)
     = showParen (p > pRstr) $
-        showsPrec pRstr' ccs .
+        showsPrec pRstr' prc .
         showString "|'" .
         showEvents es
 
-  showsPrec p (Ren s2s ccs)
+  showsPrec p (Ren s2s prc)
     = showParen (p > pRen) $
-        showsPrec pRen' ccs .
+        showsPrec pRen' prc .
         showString "[" .
         showRenFun s2s .
         showString "]"
 
   showsPrec p (PVar ell) = showString ell
 
-  showsPrec p (Rec ell ccs)
+  showsPrec p (Rec ell prc)
     = showParen True $
         showString "mu " .
         showString ell .
         showString " @ " .
-        showsPrec 0 ccs
+        showsPrec 0 prc
 \end{code}
 
 \begin{code}
 showsInfix p pI pI' showI [] = showsPrec p Zero
-showsInfix p pI pI' showI [ccs] = showsPrec p ccs
-showsInfix p pI pI' showI (ccs:ccss)
+showsInfix p pI pI' showI [prc] = showsPrec p prc
+showsInfix p pI pI' showI (prc:ccss)
     = showParen (p > pI) $
-        showsPrec pI' ccs .
+        showsPrec pI' prc .
         showI pI' ccss
 
 showSum p ccss  = showI p " + " ccss
@@ -294,9 +294,9 @@ showNms nms = concat $ intersperse "," nms
 showSeq p ccss = showI p " ; " ccss
 
 showI p op [] = id
-showI p op (ccs:ccss)
+showI p op (prc:ccss)
   = showString op .
-    showsPrec p ccs .
+    showsPrec p prc .
     showI p op ccss
 
 showEvents [] = id
@@ -329,20 +329,20 @@ showEE (e1,e2) = showString e1 .
 
 Smart Builders:
 \begin{code}
-csum :: [Process] -> Process
+csum :: [Proc] -> Proc
 csum [] = Zero
-csum [ccs] = ccs
-csum ccss = Sum ccss
+csum [prc] = prc
+csum (prc:prcs) = Sum prc $ csum prcs
 
-cpar :: [Process] -> Process
+cpar :: [Proc] -> Proc
 cpar [] = Zero
-cpar [ccs] = ccs
-cpar ccss = Par [] ccss
+cpar [prc] = prc
+cpar (prc:prcs) = Par [] prc $ cpar prcs
 
 
-rstr :: [IxLab] -> Process -> Process
-rstr [] ccs = ccs
-rstr es ccs = Rstr es ccs
+rstr :: [IxLab] -> Proc -> Proc
+rstr [] prc = prc
+rstr es prc = Rstr es prc
 
 endo :: Eq a => [(a,a)] -> a -> a
 endo [] a = a
@@ -353,31 +353,32 @@ endo ((a1,a2):as) a
 
 Summaries:
 \begin{code}
-prefixesOf :: Process -> Set Prefix
-prefixesOf (Pfx pfx ccs)   =  S.singleton pfx `S.union` prefixesOf ccs
-prefixesOf (Seq ccss)      =  S.unions $ map prefixesOf $ ccss
-prefixesOf (Sum ccss)      =  S.unions $ map prefixesOf $ ccss
-prefixesOf (Par _ ccss)    =  S.unions $ map prefixesOf $ ccss
-prefixesOf (Ext ccss)      =  S.unions $ map prefixesOf $ ccss
-prefixesOf (Rstr ss ccs)   =  prefixesOf ccs
-prefixesOf (Ren s2s ccs)   =  prefixesOf $ doRename (endo s2s) ccs
-prefixesOf (Rec s ccs)     =  prefixesOf ccs
+prefixesOf :: Proc -> Set Prefix
+prefixesOf (Pfx pfx prc)   =  S.singleton pfx `S.union` prefixesOf prc
+prefixesOf (Seq p1 p2)      =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Sum p1 p2)      =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Par _ p1 p2)    =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Ext p1 p2)      =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Rstr ss prc)   =  prefixesOf prc
+prefixesOf (Ren s2s prc)   =  prefixesOf $ doRename (endo s2s) prc
+prefixesOf (Rec s prc)     =  prefixesOf prc
 prefixesOf _               =  S.empty
 \end{code}
 
 
 Actions:
 \begin{code}
-doRename :: (String -> String) -> Process -> Process
-doRename s2s (Pfx pfx ccs)   =  Pfx (renPfx s2s pfx) $ doRename s2s ccs
-doRename s2s (Sum ccss)      =  Sum $ map (doRename s2s) ccss
-doRename s2s (Seq ccss)      =  Seq $ map (doRename s2s) ccss
-doRename s2s (Ext ccss)      =  Ext $ map (doRename s2s) ccss
-doRename s2s (Par nms ccss)  =  Par (map s2s nms) $ map (doRename s2s) ccss
-doRename s2s (Rstr es ccs)   =  Rstr (map (renIxLab s2s) es) $ doRename s2s ccs
-doRename s2s (Ren s2s' ccs)  =  doRename s2s (doRename (endo s2s') ccs)
-doRename s2s (Rec s ccs)     =  Rec s $ doRename s2s ccs
-doRename _   ccs             = ccs
+doRename :: (String -> String) -> Proc -> Proc
+doRename s2s (Pfx pfx prc)   =  Pfx (renPfx s2s pfx) $ doRename s2s prc
+doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Seq p1 p2)      =  Seq (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Ext p1 p2)      =  Ext (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Par nms p1 p2)  =  Par (map s2s nms)
+                                     (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Rstr es prc)   =  Rstr (map (renIxLab s2s) es) $ doRename s2s prc
+doRename s2s (Ren s2s' prc)  =  doRename s2s (doRename (endo s2s') prc)
+doRename s2s (Rec s prc)     =  Rec s $ doRename s2s prc
+doRename _   prc             = prc
 
 renPfx :: (String -> String) -> Prefix -> Prefix
 renPfx _ T            =  T

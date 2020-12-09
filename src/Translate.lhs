@@ -35,16 +35,16 @@ This is called $c2ix$ in [GEN]
 \begin{code}
 c2ix = indexNames
 
-indexNames :: Process -> Process
+indexNames :: Proc -> Proc
 indexNames = fst . iFrom 1
 
 
 iFrom i (Pfx pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
-iFrom i (Sum ccss) = (Sum ccss',i')
-  where (ccss',i') = paramileave iFrom i ccss
-iFrom i (Par nms ccss) = (Par nms ccss',i')
-  where (ccss',i') = paramileave iFrom i ccss
+iFrom i (Sum p1 p2) = (Sum p1' p2',i')
+  where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
+iFrom i (Par nms p1 p2) = (Par nms p1 p2',i')
+  where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
 iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
     (ccs',i') = iFrom i ccs
@@ -72,14 +72,14 @@ Given a CCS term, return a mapping from events
 to the set of indices associated with each event.
 \begin{code}
 type IxMap = Map Label (Set Index)
-indexMap :: Process -> IxMap
+indexMap :: Proc -> IxMap
 indexMap = iMap M.empty
 
 iMap imap (Pfx (Lbl (nm,i)) ccs)  =  iMap imap' ccs
                      where imap'  =  insMapping nm i imap
 iMap imap (Pfx  _ ccs)            =  iMap imap ccs
-iMap imap (Sum ccss)              =  iSeqMap imap ccss
-iMap imap (Par _ ccss)            =  iSeqMap imap ccss
+iMap imap (Sum p1 p2)              =  iSeqMap imap [p1,p2]
+iMap imap (Par _ p1 p2)            =  iSeqMap imap [p1,p2]
 iMap imap (Rstr es ccs)           =  iMap imap ccs
 iMap imap (Ren _ ccs)             =  iMap imap ccs
 iMap imap (Rec nm ccs)            =  iMap imap ccs
@@ -171,18 +171,18 @@ in order for $g^*$ to work properly.
    \forall a_i \in B \bullet \{a_k \mid a_k \in \Alf P\} \subseteq B
 \end{eqnarray*}
 \begin{code}
-wfRes :: Process -> Bool
+wfRes :: Proc -> Bool
 wfRes _ = error "wfRes NYI"
 \end{code}
 
 Type signature for process $g^*$:
 \begin{eqnarray*}
-   g^* &:& \Set(Act \times \Nat)\times Process
+   g^* &:& \Set(Act \times \Nat)\times Proc
            \fun
-           Process\\ pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
+           Proc\\ pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
 \end{eqnarray*}
 \begin{code}
-gsp :: Set IxLab -> Process -> Process
+gsp :: Set IxLab -> Proc -> Proc
 \end{code}
 
 Pre-condition for process $g^*$:
@@ -211,11 +211,12 @@ Definition of process $g^*$:
 \begin{code}
 gsp _    Zero                  =  Zero
 gsp _    v@(PVar _)            =  v
-gsp iCtxt (Sum ccss)            =  Sum $ map (gsp iCtxt) ccss
+gsp iCtxt (Sum ccs1 ccs2)       =  csum $ map (gsp iCtxt) [ccs1,ccs2]
 gsp iCtxt (Rec x ccs)           =  Rec x $ gsp iCtxt ccs
 gsp iCtxt (Rstr lbls ccs)       =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
 gsp iCtxt (Ren f ccs)           =  Ren f $ gsp iCtxt ccs
-gsp iCtxt (Par [] csss)         =  Par [] $ walk (gpar iCtxt) csss $ map alf csss
+gsp iCtxt (Par [] ccs1 ccs2)    =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
+                                          $ map alf [ccs1,ccs2]
 gsp iCtxt (Pfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
 gsp iCtxt (Pfx pfx ccs)         =  Pfx pfx $ gsp iCtxt ccs
@@ -228,11 +229,11 @@ mkpfx p lbl = Pfx (Lbl lbl) p
 
 At the top-level, we start with a empty indexed label context:
 \begin{eqnarray*}
-   q^* &:& Process \fun Process
+   q^* &:& Proc \fun Proc
 \\ g^*(P) &\defeq& g^*(\emptyset,P)
 \end{eqnarray*}
 \begin{code}
-gsp0 :: Process -> Process
+gsp0 :: Proc -> Proc
 gsp0 = gsp S.empty
 \end{code}
 
@@ -277,7 +278,7 @@ $.
    \sqcap  \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
 \end{eqnarray*}
 \begin{code}
-tl :: Process -> Process
+tl :: Proc -> Proc
 tl (Pfx pfx@(Lbl _) ccs) = Pfx (tla pfx) $ tl ccs
 tl (Pfx _ ccs) = tl ccs
 tl ccs = ccs
@@ -343,22 +344,22 @@ range over $a,b,c,\dots$ and $\bar a,\bar b, \bar c,\dots$.
 \end{eqnarray*}
 
 \begin{code}
-ccs2star :: Process -> Process
+ccs2star :: Proc -> Proc
 ccs2star ccs
  = c2star imap iccs
  where iccs = indexNames ccs
        imap = indexMap iccs
 
-c2star :: IxMap -> Process -> Process
+c2star :: IxMap -> Proc -> Proc
 
 c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
   = sumPrefixes imap alfa i $ c2star imap ccs
 
-c2star imap (Par [] ccss)
-  = rstr (syncPre $ map (S.toList . prefixesOf) ccss)
-         $ Par [] $ map (c2star imap) ccss
+c2star imap (Par [] ccs1 ccs2)
+  = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
+         $ cpar $ map (c2star imap) [ccs1,ccs2]
 
-c2star imap (Sum ccss) = Sum $ map (c2star imap) ccss
+c2star imap (Sum ccs1 ccs2) = csum $ map (c2star imap) [ccs1,ccs2]
 
 c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
 
@@ -375,13 +376,13 @@ c2star imap ccs = ccs -- 0, X
    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
 \end{eqnarray*}
 \begin{code}
-sumPrefixes :: IxMap -> Label -> Int -> Process -> Process
+sumPrefixes :: IxMap -> Label -> Int -> Proc -> Proc
 sumPrefixes imap alfa i ccs
   = case M.lookup (bar alfa) imap of
       Nothing  ->  Pfx (Lbl (alfa,One i)) ccs
       Just evts
         -> let alpha2s = map (mkSyncEvt alfa i) $ S.toList evts
-           in Sum $ map (affix ccs) ((alfa,One i):alpha2s)
+           in csum $ map (affix ccs) ((alfa,One i):alpha2s)
 
 mkSyncEvt alfa i (One j) = i2event alfa i j
 affix ccs e = Pfx (Lbl e) ccs

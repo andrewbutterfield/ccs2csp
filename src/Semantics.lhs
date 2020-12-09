@@ -56,29 +56,29 @@ For now,
 we want a function ("after-tau")
 that returns a list of processes that can result from a tau event.
 \begin{eqnarray*}
-   \circ\tau &:& Process \fun Process^*
+   \circ\tau &:& Proc \fun Proc^*
 \\ \circ\tau(P) &\defeq& \{ P' \mid P \trans\tau P' \}
 \end{eqnarray*}
 \begin{code}
 -- isCCS
-afterTau :: Process -> [Process]
-afterTau (Pfx T ccs)       =  [ccs]
-afterTau (Pfx (T' _) ccs)  =  [ccs] -- considered a tau...?
-afterTau (Sum ccss)        =  ccss
-afterTau (Par [] ccss)     =  map (Par []) $ parBodiesAfterTaus ccss
-afterTau (Rstr es ccs)     =  afterTau ccs
-afterTau (Ren s2s ccs)     =  afterTau ccs
-afterTau (Rec s ccs)       =  afterTau ccs
-afterTau _                 =  [] -- the rest, incl CSP stuff
+afterTau :: Proc -> [Proc]
+afterTau (Pfx T ccs)         =  [ccs]
+afterTau (Pfx (T' _) ccs)    =  [ccs] -- considered a tau...?
+afterTau (Sum ccs1 ccs2)     =  [ccs1,ccs2]
+afterTau (Par [] ccs1 ccs2)  =  parBodiesAfterTaus ccs1 ccs2
+afterTau (Rstr es ccs)       =  afterTau ccs
+afterTau (Ren s2s ccs)       =  afterTau ccs
+afterTau (Rec s ccs)         =  afterTau ccs
+afterTau _                   =  [] -- the rest, incl CSP stuff
 \end{code}
 
 A parallel can produce a tau event in two ways:
 (i) one of its processes performs a tau;
 or (ii) two of its processes comunicate.
 \begin{code}
-parBodiesAfterTaus :: [Process] -> [[Process]]
-parBodiesAfterTaus ccss
-  =  parBodiesAfterOwnTaus ccss ++ parBodiesAfterComTaus ccss
+parBodiesAfterTaus :: Proc -> Proc -> [Proc]
+parBodiesAfterTaus ccs1 ccs2
+  =  parBodiesAfterOwnTaus ccs1 ccs2 ++ parBodiesAfterComTaus ccs1 ccs2
 \end{code}
 
 Given $P_1 | \dots | P_i | \dots | P_n$,
@@ -86,8 +86,8 @@ for each $i \in 1\dots n$, we compute $\circ\tau(P_i)$.
 For each $P'_j$ in  $\circ\tau(P_i)$ we construct
 $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
-parBodiesAfterOwnTaus :: [Process] -> [[Process]]
-parBodiesAfterOwnTaus _ = []
+parBodiesAfterOwnTaus :: Proc -> Proc -> [Proc]
+parBodiesAfterOwnTaus _ _ = []
 \end{code}
 
 Given $P_1 | \dots | P_i | \dots | P_j | \dots | P_n$,
@@ -99,23 +99,23 @@ For every pair $(P'_m,P'_n)$ so generated,
 we construct
 $P_1 | \dots | P'_m | \dots | P'_n | \dots | P_n$.
 \begin{code}
-parBodiesAfterComTaus :: [Process] -> [[Process]]
-parBodiesAfterComTaus _ = []
+parBodiesAfterComTaus :: Proc -> Proc -> [Proc]
+parBodiesAfterComTaus _ _ = []
 \end{code}
 
 The above requires us to also provide a function ``after-label''
 that returns a list of processes that can result from a specified label event.
 \begin{eqnarray*}
-   \circ\ell &:& Process \fun Process^*
+   \circ\ell &:& Proc \fun Proc^*
 \\ \circ\ell(P) &\defeq& \{ P' \mid P \trans\ell P' \}
 \end{eqnarray*}
 \begin{code}
 -- isCCS
-afterEvt :: IxLab -> Process -> [Process]
+afterEvt :: IxLab -> Proc -> [Proc]
 afterEvt evt (Pfx (Lbl evt') ccs)
   | evt == evt'                =  [ccs]
-afterEvt evt (Sum ccss)        =  concat $ map (afterEvt evt) ccss
-afterEvt evt (Par [] ccss)     =  map (Par []) $ parBodiesAfterEvts ccss
+afterEvt evt (Sum p1 p2)        =  concat $ map (afterEvt evt) [p1,p2]
+afterEvt evt (Par [] ccs1 ccs2) =  parBodiesAfterEvts ccs1 ccs2
 afterEvt evt (Rstr es ccs)
   | not (evt `elem` es)        =  afterEvt evt ccs
 afterEvt evt (Ren s2s ccs)     =  afterEvt evt $ doRename (endo s2s) ccs
@@ -129,8 +129,8 @@ we compute $\circ\ell(P_i)$.
 For each $P'_j$ in  $\circ\ell(P_i)$ we construct
 $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
-parBodiesAfterEvts :: [Process] -> [[Process]]
-parBodiesAfterEvts _ = []
+parBodiesAfterEvts :: Proc -> Proc -> [Proc]
+parBodiesAfterEvts _ _ = []
 \end{code}
 
 \subsubsection{Equational Laws}
@@ -141,7 +141,7 @@ Law $E_1 = E_2$ means that, for all $\alpha$,
 that $E_1 \wktrans\alpha E'$ iff $E_2 \wktrans\alpha E'$.
 
 \begin{code}
-type LawFun m = Process -> m Process
+type LawFun m = Proc -> m Proc
 \end{code}
 
 
@@ -156,13 +156,13 @@ Proposition 1 ([CC],p62).
 \end{eqnarray}
 \begin{code}
 sumComm, sumAssoc, sumIdem, sumId :: MonadPlus m => LawFun m
-sumComm (Sum [p,q]) = return $ Sum [q,p]
+sumComm (Sum p q) = return $ Sum q p
 sumComm _ = fail "not P+Q"
-sumAssoc (Sum [p,Sum [q,r]]) = return $ Sum [Sum [p,q],r]
+sumAssoc (Sum p (Sum q r)) = return $ Sum (Sum p q) r
 sumAssoc _ = fail "not P+(Q+R)"
-sumIdem (Sum [p,q]) | p==q  = return p
+sumIdem (Sum p q) | p==q  = return p
 sumIdem _ = fail "not P+P"
-sumId (Sum [p,Zero]) = return p
+sumId (Sum p Zero) = return p
 sumId _ = fail "not P+0"
 \end{code}
 We can normalise sums by flattening and sorting:

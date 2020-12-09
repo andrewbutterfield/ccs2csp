@@ -30,11 +30,11 @@ r = PVar "R"
 p = PVar "P"
 ell = (Std "L",None)
 q = PVar "Q"
-cc44 = Sum [ r
-           , Par [] [ Pfx a p
-                    , Pfx b (Rstr [ell] q)
-                    ]
-           ]
+cc44 = csum [ r
+            , cpar [ Pfx a p
+                   , Pfx b (Rstr [ell] q)
+                   ]
+            ]
 \end{code}
 
 Examples from Gerard's document, v17.
@@ -42,20 +42,20 @@ Examples from Gerard's document, v17.
 -- v17, 4.1.2, p18
 s = PVar "S"
 abar = pfxbar a
-x18 = Rstr [ea] $ Par [] [Pfx a p, Pfx abar q, Pfx abar r, Pfx abar s]
+x18 = Rstr [ea] $ cpar [Pfx a p, cpar [Pfx abar q, cpar [Pfx abar r, Pfx abar s]]]
 
 --v17, 4.1.2., p19
-xl19 = Par [] [Pfx a Zero, Pfx abar Zero]
+xl19 = cpar [Pfx a Zero, Pfx abar Zero]
 ta = T' "a"
 a0 = Pfx a Zero; abar0 = Pfx abar Zero
 b0 = Pfx b Zero; bbar0 = Pfx bbar Zero
-xr19 = Sum [Pfx a $ abar0, Pfx abar $ a0, Pfx ta Zero]
+xr19 = csum [Pfx a $ abar0, csum [Pfx abar $ a0, Pfx ta Zero]]
 
 --v17, 4.1.2, p19 bottom
-xb19 = Par [] [ Pfx a (Par [] [a0,a0,a0,a0])
-              , abar0
-              , Pfx abar (Par [] [a0,a0])
-              ]
+xb19 = cpar [ Pfx a (cpar [a0,a0,a0,a0])
+            , abar0
+            , Pfx abar (cpar [a0,a0])
+            ]
 \end{code}
 
 \newpage
@@ -63,10 +63,10 @@ Examples from Vasileios MS Team whiteboard, 24th Sep.
 \begin{code}
 -- a.b.0 | b-bar.a-bar.0
 bbar = pfxbar b
-xms1 = Par [] [ Pfx a (Pfx b Zero), Pfx bbar (Pfx abar Zero)]
+xms1 = cpar [ Pfx a (Pfx b Zero), Pfx bbar (Pfx abar Zero)]
 
 -- a.b.(abar.0|b.0) | bbar.abar.0
-xms2 = Par [] [ Pfx a (Pfx b (Par [] [ Pfx abar Zero, Pfx b Zero]))
+xms2 = cpar [ Pfx a (Pfx b (cpar [ Pfx abar Zero, Pfx b Zero]))
               , Pfx bbar (Pfx abar Zero)
               ]
 -- manually laid out below -- need better pretty-printing
@@ -94,7 +94,7 @@ Examples from [GEN, v19 Note4+] and [VK Note 4]
 \begin{code}
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
-aIabar = Par [] [a0,abar0]
+aIabar = cpar [a0,abar0]
 i_aIabar = indexNames aIabar
 g_aIabar = gsp0 i_aIabar
 -- p21 g*({},(a.0 | a-bar.0)|' {a})
@@ -103,7 +103,7 @@ noaIabar = Rstr [ea] aIabar
 i_noaIabar = indexNames noaIabar
 g_noaIabar = gsp0 i_noaIabar
 -- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
-bAndaIabar = Sum [noaIabar,b0]
+bAndaIabar = csum [noaIabar,b0]
 i_bAndaIabar = indexNames bAndaIabar
 g_bAndaIabar = gsp0 i_bAndaIabar
 -- VK:
@@ -135,11 +135,11 @@ we see the following, simplified here a bit:
 Note that the recursion is under the iterated parallel,
 not enclosing it.
 \begin{code}
-ever :: IxLab -> Process
+ever :: IxLab -> Proc
 ever evt = Rec "X" $ Pfx (Lbl $ evtbar evt) $ PVar "X"
 infixl 7 \\
-(\\) :: Process -> [IxLab] -> Process
-ccs \\ ilbls  =  Rstr ilbls $ Par [] (ccs:map ever ilbls)
+(\\) :: Proc -> [IxLab] -> Proc
+ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever ilbls)
 \end{code}
 
 Here we want to prove(?) that
