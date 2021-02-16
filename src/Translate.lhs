@@ -22,7 +22,7 @@ import Semantics
 This section is based mainly on
 (a fairly recent version of)
 the document ``From CCS to CSP'', by G. Ekembe N.,
-in file \texttt{CCS-Pi-extensions\_}$\langle$version$\rangle$\texttt{.pdf}
+in file \texttt{CCStoCSPgstar\_}$\langle$version$\rangle$\texttt{.pdf}
 hereinafter [GEN].
 
 \subsection{Pre-Indexing}
@@ -58,8 +58,7 @@ iFrom i ccs = (ccs,i)
 iPfx :: Int -> Prefix -> Prefix
 iPfx i T = T
 iPfx i (Lbl e) = Lbl (iLbl i e)
-iPfx i pfx@(T' _) = error ("pre-indexing CCS term with tagged-tau "++show pfx)
-iPfx i pfx@(Evt _) = error ("pre-indexing CCS term with CSP prefix "++show pfx)
+iPfx _ pfx = pfx
 
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
@@ -109,12 +108,12 @@ Defs. 4.2, 4.1 and end of 4.3, in [GEN].
 We assume the input indexed labels have single indices only.
 \begin{code}
 gsa2 iCtxt (a,One i) = gsa2' a i $ S.toList iCtxt
-gsa2 _ e = error ("gsa2: not a singly indexed event "++show e)
+gsa2 _ e             = S.singleton e
 
 gsa2' a i [] = S.empty
 gsa2' a i ((a',One j):iCtxt)
   |  a == bar a' && i /= j  =  S.insert (i2event a i j) $ gsa2' a i iCtxt
-gsa2' a i (_:iCtxt)          =  gsa2' a i iCtxt
+gsa2' a i (_:iCtxt)         =  gsa2' a i iCtxt
 \end{code}
 
 We now have a series of overloadings of $g^*$
@@ -134,7 +133,7 @@ gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
   g^* &:& \Set(Act \times \Nat)\times \Set(Act \times \Nat)
           \fun
           \Set(Act \times \Nat)
-\\ g^*(S,B) &defeq& \bigcup\{ g^*(S,a_i) \mid a_i \in B \}
+\\ g^*(S,B) &\defeq& \bigcup\{ g^*(S,a_i) \mid a_i \in B \}
 \end{eqnarray*}
 \begin{code}
 gsb iCtxt ilbls = concat $ map (S.toList . gsa2 iCtxt) ilbls
