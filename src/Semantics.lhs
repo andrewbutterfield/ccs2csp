@@ -10,6 +10,7 @@ module Semantics where
 import Data.Set (Set)
 import qualified Data.Set as S
 import Control.Monad
+import Control
 import Syntax
 
 --import Debug.Trace
@@ -87,7 +88,11 @@ For each $P'_j$ in  $\circ\tau(P_i)$ we construct
 $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
 parBodiesAfterOwnTaus :: Proc -> Proc -> [Proc]
-parBodiesAfterOwnTaus _ _ = []
+parBodiesAfterOwnTaus ccs1 ccs2
+  = map (comp ccs1) ccs2s' ++ map (flip comp ccs2) ccs1s'
+  where
+    ccs1s' = afterTau ccs1
+    ccs2s' = afterTau ccs2
 \end{code}
 
 Given $P_1 | \dots | P_i | \dots | P_j | \dots | P_n$,
@@ -98,9 +103,19 @@ where $\ell \in \Alf(P_i)$ and $\bar\ell \in \Alf(P_j)$.
 For every pair $(P'_m,P'_n)$ so generated,
 we construct
 $P_1 | \dots | P'_m | \dots | P'_n | \dots | P_n$.
+When $n=2$, we simply compute
 \begin{code}
 parBodiesAfterComTaus :: Proc -> Proc -> [Proc]
-parBodiesAfterComTaus _ _ = []
+parBodiesAfterComTaus ccs1 ccs2
+  = crossmap comp ccs1s' ccs2s'
+  where
+    alf1 = alf ccs1
+    alf2 = alf ccs2
+    alf12 = alf1 `S.intersection` (S.map evtbar alf2)
+    ell1s = S.toList alf12
+    ell2s = map evtbar ell1s
+    ccs1s' = concat $ map ($ ccs1) (map afterEvt ell1s)
+    ccs2s' = concat $ map ($ ccs2) (map afterEvt ell2s)
 \end{code}
 
 The above requires us to also provide a function ``after-label''
@@ -130,7 +145,13 @@ For each $P'_j$ in  $\circ\ell(P_i)$ we construct
 $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
 parBodiesAfterEvts :: Proc -> Proc -> [Proc]
-parBodiesAfterEvts _ _ = []
+parBodiesAfterEvts ccs1 ccs2
+  = map (comp ccs1) ccs2s' ++ map (flip comp ccs2) ccs1s'
+  where
+    alf1 = S.toList $ alf ccs1
+    alf2 = S.toList $ alf ccs2
+    ccs1s' = concat $ map ($ ccs1) (map afterEvt alf1)
+    ccs2s' = concat $ map ($ ccs2) (map afterEvt alf2)
 \end{code}
 
 \subsubsection{Equational Laws}

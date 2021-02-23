@@ -77,8 +77,8 @@ indexMap = iMap M.empty
 iMap imap (Pfx (Lbl (nm,i)) ccs)  =  iMap imap' ccs
                      where imap'  =  insMapping nm i imap
 iMap imap (Pfx  _ ccs)            =  iMap imap ccs
-iMap imap (Sum p1 p2)              =  iSeqMap imap [p1,p2]
-iMap imap (Par _ p1 p2)            =  iSeqMap imap [p1,p2]
+iMap imap (Sum p1 p2)             =  iSeqMap imap [p1,p2]
+iMap imap (Par _ p1 p2)           =  iSeqMap imap [p1,p2]
 iMap imap (Rstr es ccs)           =  iMap imap ccs
 iMap imap (Ren _ ccs)             =  iMap imap ccs
 iMap imap (Rec nm ccs)            =  iMap imap ccs
@@ -204,6 +204,8 @@ Definition of process $g^*$:
    g^*(S,P)\restrict g^*(S,B)
    % \cup
    % \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
+\\ g^*(S,P[f]) &\defeq& (g^*(S,P))[f]
+\\ g^*(S,X) &\defeq& X
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
 \end{eqnarray*}
 
@@ -258,43 +260,60 @@ Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
    conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
 \end{eqnarray*}
 
+We implement this as a prefix transform $tlp$:
+\begin{code}
+tlp :: IxLab -> Prefix
+tlp ix        =  Evt $ tll ix
+tll (nm,ix)   =  tln nm++tli ix
+tln (Std nm)  =  nm
+tln (Bar nm)  =  nm
+tli None      =  ""
+tli (One i)   =  "_"++show i
+tli (Two i j) =  "_"++show i++"_"++show j
+\end{code}
+
 For $P$ a CCS process, recall ``after-tau'':
 $
    \circ\tau(P) \defeq
      \{ P' \mid P \trans\tau P' \}
 $.
 
-
 \begin{eqnarray*}
-   tl(0) &\defeq& STOP
-\\ tl(\tau.P) &\defeq& tl(P)
-\\ tl(a.P) &\defeq& tla(a) \then tl(P)
-\\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{\Alf P\cap{\Alf Q}} tl(Q)
-\\ tl(P\restrict A) &\defeq& tl(P) \parallel_A STOP
+   tl(0)               &\defeq& STOP
+\\ tl(\tau.P)          &\defeq& tl(P)
+\\ tl(a.P)             &\defeq& tlp(a) \then tl(P)
+\\ tl(P_1+P_2)         &\defeq& (tl(P_1) \Box tl(P_2))
+                                \sqcap
+                                \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
+\\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{\Alf tl(P)\cap{\Alf tl(Q)}} tl(Q)
+\\ tl(P\restrict A)    &\defeq& tl(P) \parallel_{tlps(A)} STOP
+\\ tl(X)               &\defeq& X
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
-\\ tl(P_1+P_2) &\defeq&
-   (tl(P_1) \Box tl(P_2))
-   \sqcap  \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
 \end{eqnarray*}
 \begin{code}
 tl :: Proc -> Proc
-tl (Pfx pfx@(Lbl _) ccs) = Pfx (tla pfx) $ tl ccs
-tl (Pfx _ ccs) = tl ccs
-tl ccs = ccs
+tl Zero                   =  Zero
+tl (Pfx (Lbl il) ccs)     =  Pfx (tlp il) $ tl ccs
+tl (Pfx pfx@(Evt _) ccs)  =  Pfx pfx $ tl ccs
+tl (Pfx _ ccs)            =  tl ccs
+tl (Sum ccs1 ccs2)
+  | null afters           =  Ext csp1 csp2
+  | otherwise             =  Sum (Ext csp1 csp2) (sum afters)
+  where csp1 =  tl(ccs1)
+        csp2 =  tl(ccs2)
+        csps1 = map tl (afterTau ccs1)
+        csps2 = map tl (afterTau ccs2)
+        afters = csps1 ++ csps2
+        sum = foldl1 Sum
+tl (Par [] ccs1 ccs2)     =  Par sync csp1 csp2
+  where csp1 =  tl(ccs1)
+        csp2 =  tl(ccs2)
+        sync  =  map tll $ S.toList (alf csp1 `S.union` alf csp2)
+tl (Rstr ixs ccs)         =  Par (map tll ixs) (tl ccs) Zero
+tl ccs                    =  ccs
 \end{code}
 
 
-Note that $tla(a)$ removes any bar over $a$,
-and merges any indices into the name string.
-\begin{code}
-tla :: Prefix -> Prefix
-tla (Lbl (nm,ix))  =  Evt (tln nm++tli ix)
-tln (Std nm)   =  nm
-tln (Bar nm)   =  nm
-tli None       =  ""
-tli (One i)    =  "_"++show i
-tli (Two i j)  =  "_"++show i++"_"++show j
-\end{code}
 
 
 \begin{eqnarray*}

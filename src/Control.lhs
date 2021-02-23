@@ -12,6 +12,17 @@ module Control where
 \end{code}
 
 
+\subsection{Cross Product}
+
+\begin{code}
+crossmap :: (a->b->c) -> [a] -> [b] -> [c]
+crossmap _  [] _   =  []
+crossmap _  _  []  =  []
+crossmap op (a:as) bs  = rowmap op a bs ++ crossmap op as bs
+rowmap op a (b:bs) = (a `op` b) : rowmap op a bs
+rowmap op a [] = []
+\end{code}
+
 \subsection{Walk with me}
 
 Given:

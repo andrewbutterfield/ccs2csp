@@ -145,6 +145,9 @@ data Proc                   -- which? CSS? CSP? both?
   | Rec String Proc         -- both
   deriving (Eq,Ord,Read)
 
+comp :: Proc -> Proc -> Proc
+comp = Par []
+
 isCCS :: Proc -> Bool
 isCCS Skip             =  False
 isCCS (Seq _ _)        =  False
@@ -337,7 +340,7 @@ csum (prc:prcs) = Sum prc $ csum prcs
 cpar :: [Proc] -> Proc
 cpar [] = Zero
 cpar [prc] = prc
-cpar (prc:prcs) = Par [] prc $ cpar prcs
+cpar (prc:prcs) = comp prc $ cpar prcs
 
 
 rstr :: [IxLab] -> Proc -> Proc
