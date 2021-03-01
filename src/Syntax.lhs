@@ -77,10 +77,11 @@ data Prefix
   deriving (Eq,Ord,Read)
 
 instance Show Prefix where
-  show T = "t"
-  show (Lbl (Std s,i)) = s ++ show i
-  show (Lbl (Bar s,i)) = s ++ show i ++ "-bar"
-  show (T' n) = show T ++ "["++n++"|"++n++"-bar]"
+  show T                =  "t"
+  show (Lbl (Std s,i))  =  s ++ show i
+  show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
+  show (T' n)           =  show T ++ "["++n++"|"++n++"-bar]"
+  show (Evt str)        =  str
 
 pfxbar :: Prefix -> Prefix
 pfxbar (Lbl e)  =  Lbl $ evtbar e

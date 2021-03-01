@@ -92,20 +92,27 @@ xms2 = cpar [ Pfx a (Pfx b (cpar [ Pfx abar Zero, Pfx b Zero]))
 Examples from [GEN, v19 Note4+] and [VK Note 4]
 
 \begin{code}
+mkExample ccs
+ = putStrLn $ unlines $ map show [ccs,ccsi,ccsg,csp]
+ where
+   ccsi = indexNames ccs
+   ccsg = gsp0 ccsi
+   csp = tl ccsg
+
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
 aIabar = cpar [a0,abar0]
-i_aIabar = indexNames aIabar
-g_aIabar = gsp0 i_aIabar
+xmp_aIabar = mkExample aIabar
+
 -- p21 g*({},(a.0 | a-bar.0)|' {a})
    -- =  ((a1.0+a12.0)|(a2-bar.0+a12-bar.0)) |' {a1,a2}
 noaIabar = Rstr [ea] aIabar
-i_noaIabar = indexNames noaIabar
-g_noaIabar = gsp0 i_noaIabar
+xmp_noaIabar = mkExample noaIabar
+
 -- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
 bAndaIabar = csum [noaIabar,b0]
-i_bAndaIabar = indexNames bAndaIabar
-g_bAndaIabar = gsp0 i_bAndaIabar
+xmp_bAndaIabar = mkExample bAndaIabar
+
 -- VK:
 -- (a1 | a2-bar)[g*]   -->  (a1 + a12 | a2-bar + a12-bar)
 -- a \restrict a | a-bar  -->  a2

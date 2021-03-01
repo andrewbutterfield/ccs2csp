@@ -246,10 +246,15 @@ gsp0 = gsp S.empty
    c4star(S,P) &\defeq& g^*(S,c2ix(P))
 \\ c2star(S,P)
    &\defeq&
-   c4star(S,P)\restrict \{g\pi_2(a_i)\mid a)i \in \Alf c2ix(P)\}
+   c4star(S,P)\restrict \{g\pi_2(a_i)\mid a_i \in \Alf c2ix(P)\}
 \end{eqnarray*}
 \begin{code}
 c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
+c2star iCtxt ccs
+ = let
+     ccsi = c2ix ccs
+     res = S.toList $ S.unions $ S.map (gsa2 iCtxt) (alf ccsi)
+   in Rstr res $ gsp iCtxt ccsi
 \end{code}
 
 \subsection{Translate toward CSP}
@@ -319,6 +324,10 @@ tl ccs                    =  ccs
 \begin{eqnarray*}
     t2csp(P) &\defeq& tl(conm(c4star(P)))
 \end{eqnarray*}
+\begin{code}
+t2csp :: Proc -> Proc
+t2csp ccs = tl $ c4star S.empty ccs
+\end{code}
 
 
 \newpage
@@ -365,27 +374,27 @@ range over $a,b,c,\dots$ and $\bar a,\bar b, \bar c,\dots$.
 ccs2star :: Proc -> Proc
 ccs2star ccs
  = c2star imap iccs
- where iccs = indexNames ccs
-       imap = indexMap iccs
+ where  iccs = indexNames ccs
+        imap = indexMap iccs
 
-c2star :: IxMap -> Proc -> Proc
+        c2star :: IxMap -> Proc -> Proc
 
-c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
-  = sumPrefixes imap alfa i $ c2star imap ccs
+        c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
+          = sumPrefixes imap alfa i $ c2star imap ccs
 
-c2star imap (Par [] ccs1 ccs2)
-  = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
-         $ cpar $ map (c2star imap) [ccs1,ccs2]
+        c2star imap (Par [] ccs1 ccs2)
+          = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
+                 $ cpar $ map (c2star imap) [ccs1,ccs2]
 
-c2star imap (Sum ccs1 ccs2) = csum $ map (c2star imap) [ccs1,ccs2]
+        c2star imap (Sum ccs1 ccs2) = csum $ map (c2star imap) [ccs1,ccs2]
 
-c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
+        c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
 
-c2star imap (Ren f ccs) = Ren f $ c2star imap ccs
+        c2star imap (Ren f ccs) = Ren f $ c2star imap ccs
 
-c2star imap (Rec x ccs) = Rec x $ c2star imap ccs
+        c2star imap (Rec x ccs) = Rec x $ c2star imap ccs
 
-c2star imap ccs = ccs -- 0, X
+        c2star imap ccs = ccs -- 0, X
 \end{code}
 
 \begin{eqnarray*}
