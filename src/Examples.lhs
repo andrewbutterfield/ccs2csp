@@ -93,8 +93,10 @@ Examples from [GEN, v19 Note4+] and [VK Note 4]
 
 \begin{code}
 mkExample ccs
- = putStrLn $ unlines $ map show [ccs,ccsi,ccsg,csp]
+ = putStrLn $ unlines $ map shExample
+            $ zip ["ccs ","c2ix","g*  ","csp "] [ccs,ccsi,ccsg,csp]
  where
+   shExample (label,proc) = label ++ " : " ++ show proc 
    ccsi = indexNames ccs
    ccsg = gsp0 ccsi
    csp = tl ccsg

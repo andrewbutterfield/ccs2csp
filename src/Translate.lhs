@@ -43,7 +43,7 @@ iFrom i (Pfx pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
 iFrom i (Sum p1 p2) = (Sum p1' p2',i')
   where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
-iFrom i (Par nms p1 p2) = (Par nms p1 p2',i')
+iFrom i (Par nms p1 p2) = (Par nms p1' p2',i')
   where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
 iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
