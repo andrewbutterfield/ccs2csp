@@ -94,12 +94,14 @@ Examples from [GEN, v19 Note4+] and [VK Note 4]
 \begin{code}
 mkExample ccs
  = putStrLn $ unlines $ map shExample
-            $ zip ["ccs ","c2ix","g*  ","csp "] [ccs,ccsi,ccsg,csp]
+            $ zip ["ccs ","c2ix","g*0 ","cs2 ","csp "]
+                  [ ccs  , ccsi , ccsg , ccs2 , csp  ]
  where
-   shExample (label,proc) = label ++ " : " ++ show proc 
+   shExample (label,proc) = label ++ " : " ++ show proc
    ccsi = indexNames ccs
    ccsg = gsp0 ccsi
-   csp = tl ccsg
+   ccs2 = c2star S.empty ccs
+   csp = tl ccs2
 
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
