@@ -17,7 +17,7 @@ import Semantics
 
 import Debug.Trace
 dbg msg x = trace (msg++show x) x
-pdbg nm x = dbg ("@"++nm++":\n") x
+pdbg nm x = dbg ("\n@"++nm++":\n") x
 \end{code}
 
 This section is based mainly on
@@ -247,28 +247,19 @@ gsp0 = gsp S.empty
    c4star(S,P) &\defeq& g^*(S,c2ix(P))
 \\ c2star(S,P)
    &\defeq&
-   c4star(S,P)\restrict \{g\pi_2(a_i)\mid a_i \in \Alf c2ix(P)\}
+   c4star(S,P)\restrict \{g\pi_2(S \cup \Alf c2ix(P),a_i)\mid a_i \in \Alf c2ix(P)\}
 \end{eqnarray*}
 \begin{code}
 c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
 c2star iCtxt ccs
  = let
      ccsi = c2ix ccs
-     res = S.toList $ S.unions $ pdbg "gsa2" $ S.map (gsa2 iCtxt) $ pdbg "alf" (alf ccsi)
+     ccsa = alf ccsi
+     iCtxt' = iCtxt `S.union` ccsa
+     res = S.toList $ S.unions $ S.map (gsa2 iCtxt') ccsa
    in Rstr res $ gsp iCtxt ccsi
 \end{code}
-There is a problem here: at the top-level,
-$S$/\texttt{iCtxt} must be $\emptyset$.
-But in this case, then $g\pi_2(\emptyset,\_)$ returns an empty set.
-We need $c4star(\emptyset,P)$ to return a ``final'' non-empty value of $S$
-that can be passed into $c2star$.
-In effect $g^*$ needs to return $(P,S')$,
-where $S'$ is the final value of $S$.
-
-The question then becomes:
-should the restriction be applied recursively deeper down,
-rather than at the top-level?
-
+ 
 \subsection{Translate toward CSP}
 
 Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
