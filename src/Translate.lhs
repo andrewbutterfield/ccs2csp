@@ -15,8 +15,9 @@ import Control
 import Syntax
 import Semantics
 
---import Debug.Trace
---dbg msg x = trace (msg++show x) x
+import Debug.Trace
+dbg msg x = trace (msg++show x) x
+pdbg nm x = dbg ("@"++nm++":\n") x
 \end{code}
 
 This section is based mainly on
@@ -230,7 +231,7 @@ mkpfx p lbl = Pfx (Lbl lbl) p
 
 At the top-level, we start with a empty indexed label context:
 \begin{eqnarray*}
-   q^* &:& Proc \fun Proc
+   g^* &:& Proc \fun Proc
 \\ g^*(P) &\defeq& g^*(\emptyset,P)
 \end{eqnarray*}
 \begin{code}
@@ -253,9 +254,20 @@ c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
 c2star iCtxt ccs
  = let
      ccsi = c2ix ccs
-     res = S.toList $ S.unions $ S.map (gsa2 iCtxt) (alf ccsi)
+     res = S.toList $ S.unions $ pdbg "gsa2" $ S.map (gsa2 iCtxt) $ pdbg "alf" (alf ccsi)
    in Rstr res $ gsp iCtxt ccsi
 \end{code}
+There is a problem here: at the top-level,
+$S$/\texttt{iCtxt} must be $\emptyset$.
+But in this case, then $g\pi_2(\emptyset,\_)$ returns an empty set.
+We need $c4star(\emptyset,P)$ to return a ``final'' non-empty value of $S$
+that can be passed into $c2star$.
+In effect $g^*$ needs to return $(P,S')$,
+where $S'$ is the final value of $S$.
+
+The question then becomes:
+should the restriction be applied recursively deeper down,
+rather than at the top-level?
 
 \subsection{Translate toward CSP}
 
