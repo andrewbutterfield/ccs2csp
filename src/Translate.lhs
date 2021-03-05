@@ -49,7 +49,7 @@ iFrom i (Par nms p1 p2) = (Par nms p1' p2',i')
 iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
     (ccs',i') = iFrom i ccs
-    es' = S.filter (cameFrom es) $ alf ccs'
+    es' = S.map getlbl $ S.filter (cameFrom es) $ alf ccs'
 iFrom i (Ren pfn ccs) = (Ren pfn ccs',i')
   where (ccs',i') = iFrom i ccs
 iFrom i (Rec nm ccs) = (Rec nm ccs',i')
@@ -64,8 +64,12 @@ iPfx _ pfx = pfx
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
 
-cameFrom :: (Set IxLab) -> IxLab -> Bool
-cameFrom es e = (root . fst) e `S.member` S.map (root . fst) es
+cameFrom :: (Set IxLab) -> Prefix -> Bool
+cameFrom es (Lbl e)  =  (root . fst) e `S.member` S.map (root . fst) es
+cameFrom _  _        =  False
+
+getlbl :: Prefix -> IxLab
+getlbl (Lbl lbl)  =  lbl
 \end{code}
 
 Given a CCS term, return a mapping from events
@@ -108,6 +112,7 @@ Defs. 4.2, 4.1 and end of 4.3, in [GEN].
 \end{eqnarray*}
 We assume the input indexed labels have single indices only.
 \begin{code}
+gsa2 :: Set IxLab -> IxLab -> Set IxLab
 gsa2 iCtxt (a,One i) = gsa2' a i $ S.toList iCtxt
 gsa2 _ e             = S.singleton e
 
@@ -127,6 +132,7 @@ We now have a series of overloadings of $g^*$
 \\ g^*(S,a_i) &\defeq& \{a_i\} \cup g\pi_2(S,a_i)
 \end{eqnarray*}
 \begin{code}
+gsa :: Set IxLab -> IxLab -> Set IxLab
 gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
 \end{code}
 
@@ -137,6 +143,7 @@ gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
 \\ g^*(S,B) &\defeq& \bigcup\{ g^*(S,a_i) \mid a_i \in B \}
 \end{eqnarray*}
 \begin{code}
+gsb :: Set IxLab -> Set IxLab -> Set IxLab
 gsb iCtxt ilbls = S.unions $ S.map (gsa2 iCtxt) ilbls
 \end{code}
 
@@ -211,21 +218,22 @@ Definition of process $g^*$:
 \end{eqnarray*}
 
 \begin{code}
-gsp _    Zero                  =  Zero
-gsp _    v@(PVar _)            =  v
+gsp _    Zero                   =  Zero
+gsp _    v@(PVar _)             =  v
 gsp iCtxt (Sum ccs1 ccs2)       =  csum $ map (gsp iCtxt) [ccs1,ccs2]
 gsp iCtxt (Rec x ccs)           =  Rec x $ gsp iCtxt ccs
 gsp iCtxt (Rstr lbls ccs)       =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
 gsp iCtxt (Ren f ccs)           =  Ren f $ gsp iCtxt ccs
 gsp iCtxt (Par nms ccs1 ccs2)
  | S.null nms                   =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
-                                          $ map alf [ccs1,ccs2]
+                                        $ map getCCSLbls [ccs1,ccs2]
 gsp iCtxt (Pfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
 gsp iCtxt (Pfx pfx ccs)         =  Pfx pfx $ gsp iCtxt ccs
 gsp _ csp  =  error ("Cannot gsp CSP syntax:("++show csp++")")
 
 -- helpers
+getCCSLbls = S.map getlbl . S.filter isLbl . alf
 gpar iCtxt p ilbls = gsp (S.unions $ iCtxt:ilbls) p
 mkpfx p lbl = Pfx (Lbl lbl) p
 \end{code}
@@ -255,7 +263,7 @@ c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
 c2star iCtxt ccs
  = let
      ccsi = c2ix ccs
-     ccsa = alf ccsi
+     ccsa = getCCSLbls ccsi
      iCtxt' = iCtxt `S.union` ccsa
      res = S.unions $ S.map (gsa2 iCtxt') ccsa
    in Rstr res $ gsp iCtxt ccsi
@@ -323,8 +331,8 @@ tl (Par nms ccs1 ccs2)
   =  Par sync csp1 csp2
   where csp1  =  tl(ccs1)
         csp2  =  tl(ccs2)
-        alf1  =  S.map tll $ alf csp1
-        alf2  =  S.map tll $ alf csp2
+        alf1  =  S.map show $ alf csp1
+        alf2  =  S.map show $ alf csp2
         sync  =  alf1 `S.intersection` alf2
 tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Zero
 tl ccs                    =  ccs

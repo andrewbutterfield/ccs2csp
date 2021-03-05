@@ -95,15 +95,15 @@ Examples from [GEN, v19 Note4+] and [VK Note 4]
 \begin{code}
 mkExample ccs
  = putStrLn $ unlines $ map shExample
-            $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","csp  ","t2csp"]
-                  [ ccs   , ccsi  , ccsg  , ccs4  , csp   , tcsp   ]
+            $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","tlp  ","t2csp"]
+                  [ ccs   , ccsi  , ccsg  , ccs4  , tlp   , csp   ]
  where
    shExample (label,proc) = label ++ " : " ++ show proc
    ccsi = indexNames ccs
    ccsg = gsp0 ccsi
    ccs4 = c4star S.empty ccs
-   csp  = tl ccs4
-   tcsp = t2csp ccs
+   tlp  = tl ccs4
+   csp = t2csp ccs
 
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
@@ -149,7 +149,7 @@ Note that the recursion is under the iterated parallel,
 not enclosing it.
 \begin{code}
 ever :: IxLab -> Proc
-ever evt = Rec "X" $ Pfx (Lbl $ evtbar evt) $ PVar "X"
+ever evt = Rec "X" $ Pfx (Lbl $ ixlbar evt) $ PVar "X"
 infixl 7 \\
 (\\) :: Proc -> (Set IxLab) -> Proc
 ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))

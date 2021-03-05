@@ -112,9 +112,9 @@ parBodiesAfterComTaus ccs1 ccs2
   where
     alf1 = alf ccs1
     alf2 = alf ccs2
-    alf12 = alf1 `S.intersection` (S.map evtbar alf2)
+    alf12 = alf1 `S.intersection` (S.map pfxbar alf2)
     ell1s = S.toList alf12
-    ell2s = map evtbar ell1s
+    ell2s = map pfxbar ell1s
     ccs1s' = concat $ map ($ ccs1) (map afterEvt ell1s)
     ccs2s' = concat $ map ($ ccs2) (map afterEvt ell2s)
 \end{code}
@@ -127,17 +127,17 @@ that returns a list of processes that can result from a specified label event.
 \end{eqnarray*}
 \begin{code}
 -- isCCS
-afterEvt :: IxLab -> Proc -> [Proc]
-afterEvt evt (Pfx (Lbl evt') ccs)
-  | evt == evt'                =  [ccs]
-afterEvt evt (Sum p1 p2)        =  concat $ map (afterEvt evt) [p1,p2]
-afterEvt evt (Par nms ccs1 ccs2)
+afterEvt :: Prefix -> Proc -> [Proc]
+afterEvt pfx (Pfx pfx' ccs)
+  | pfx == pfx'                 =  [ccs]
+afterEvt pfx (Sum p1 p2)        =  concat $ map (afterEvt pfx) [p1,p2]
+afterEvt pfx (Par nms ccs1 ccs2)
  | S.null nms  =  parBodiesAfterEvts ccs1 ccs2
-afterEvt evt (Rstr es ccs)
-  | not (evt `elem` es)        =  afterEvt evt ccs
-afterEvt evt (Ren s2s ccs)     =  afterEvt evt $ doRename (endo s2s) ccs
-afterEvt evt (Rec s ccs)       =  afterEvt evt ccs
-afterEvt evt _                 =  [] -- the rest, incl CSP stuff
+afterEvt pfx@(Lbl evt) (Rstr es ccs)
+  | not (evt `elem` es)        =  afterEvt pfx ccs
+afterEvt pfx (Ren s2s ccs)     =  afterEvt pfx $ doRename (endo s2s) ccs
+afterEvt pfx (Rec s ccs)       =  afterEvt pfx ccs
+afterEvt pfx _                 =  [] -- the rest, incl CSP stuff
 \end{code}
 
 Given $P_1 | \dots | P_i | \dots | P_n$,

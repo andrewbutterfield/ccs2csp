@@ -64,8 +64,8 @@ showEvent :: IxLab -> String
 showEvent (Std ell,i) = ell ++ show i
 showEvent (Bar ell,i) = ell ++ show i ++ "-bar"
 
-evtbar :: IxLab -> IxLab
-evtbar (ell,i) = (bar ell,i)
+ixlbar :: IxLab -> IxLab
+ixlbar (ell,i) = (bar ell,i)
 \end{code}
 
 \begin{code}
@@ -76,6 +76,10 @@ data Prefix
   | Evt String  -- CSP     Event
   deriving (Eq,Ord,Read)
 
+isLbl :: Prefix -> Bool
+isLbl (Lbl _)  =  True
+isLbl _        =  False
+
 instance Show Prefix where
   show T                =  "t"
   show (Lbl (Std s,i))  =  s ++ show i
@@ -84,12 +88,12 @@ instance Show Prefix where
   show (Evt str)        =  str
 
 pfxbar :: Prefix -> Prefix
-pfxbar (Lbl e)  =  Lbl $ evtbar e
+pfxbar (Lbl e)  =  Lbl $ ixlbar e
 pfxbar pfx      =  pfx
 \end{code}
 
 \begin{code}
-type RenFun = [(String,String)]
+type RenPairs = [(String,String)]
 \end{code}
 
 
@@ -132,18 +136,18 @@ CSP $;$;
 and
 CSP $\Box$.
 \begin{code}
-data Proc                   -- which? CSS? CSP? both?
-  = Zero                    -- both  0, STOP
-  | Skip                    -- CSP SKIP
-  | Pfx Prefix Proc         -- both, Evt for CSP, others for CCS
-  | Seq Proc Proc           -- CSP ;
-  | Sum Proc Proc           -- both + |~|
-  | Ext Proc Proc           -- CSP []
+data Proc                       -- which? CSS? CSP? both?
+  = Zero                        -- both  0, STOP
+  | Skip                        -- CSP SKIP
+  | Pfx Prefix Proc             -- both, Evt for CSP, others for CCS
+  | Seq Proc Proc               -- CSP ;
+  | Sum Proc Proc               -- both + |~|
+  | Ext Proc Proc               -- CSP []
   | Par (Set String) Proc Proc  -- both  | |..|
   | Rstr (Set IxLab) Proc       -- both |' \
-  | Ren RenFun Proc         -- both  _[f]  f(_)
-  | PVar String             -- both
-  | Rec String Proc         -- both
+  | Ren RenPairs Proc           -- both  _[f]  f(_)
+  | PVar String                 -- both
+  | Rec String Proc             -- both
   deriving (Eq,Ord,Read)
 
 comp :: Proc -> Proc -> Proc
@@ -190,9 +194,15 @@ isCSPPfx _               =  False
 \end{code}
 
 \begin{code}
-renameEvt :: RenFun -> IxLab -> IxLab
-renameEvt s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
-renameEvt s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
+renamePfx :: RenPairs -> Prefix -> Prefix
+renamePfx _   T          =  T
+renamePfx s2s (T' s)     =  T'  $ renameStr s s2s
+renamePfx s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
+renamePfx s2s (Evt e)    =  Evt $ renameStr e s2s
+
+renameIxL :: RenPairs -> IxLab -> IxLab
+renameIxL s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
+renameIxL s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
 
 renameStr s []  =  s
 renameStr s ((f,t):s2s)
@@ -201,16 +211,16 @@ renameStr s ((f,t):s2s)
 \end{code}
 
 \begin{code}
-alf :: Proc -> Set IxLab
+alf :: Proc -> Set Prefix
 alf Zero            =  S.empty
 alf Skip            =  S.empty
-alf (Pfx pfx prc)   =  alfPfx pfx `S.union` alf prc
+alf (Pfx pfx prc)   =  S.singleton pfx `S.union` alf prc
 alf (Seq p1 p2)     =  alf p1 `S.union` alf p2
 alf (Sum p1 p2)     =  alf p1 `S.union` alf p2
 alf (Ext p1 p2)     =  alf p1 `S.union` alf p2
 alf (Par nms p1 p2) =  alf p1 `S.union` alf p2
 alf (Rstr es prc)   =  alf prc
-alf (Ren s2s prc)   =  S.map (renameEvt s2s) $ alf prc
+alf (Ren s2s prc)   =  S.map (renamePfx s2s) $ alf prc
 alf (PVar s)        =  S.empty
 alf (Rec s prc)     =  alf prc
 
@@ -359,10 +369,10 @@ Summaries:
 \begin{code}
 prefixesOf :: Proc -> Set Prefix
 prefixesOf (Pfx pfx prc)   =  S.singleton pfx `S.union` prefixesOf prc
-prefixesOf (Seq p1 p2)      =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Sum p1 p2)      =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Par _ p1 p2)    =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Ext p1 p2)      =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Seq p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Sum p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Par _ p1 p2)   =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Ext p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
 prefixesOf (Rstr ss prc)   =  prefixesOf prc
 prefixesOf (Ren s2s prc)   =  prefixesOf $ doRename (endo s2s) prc
 prefixesOf (Rec s prc)     =  prefixesOf prc
