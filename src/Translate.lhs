@@ -49,7 +49,7 @@ iFrom i (Par nms p1 p2) = (Par nms p1' p2',i')
 iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
     (ccs',i') = iFrom i ccs
-    es' = filter (cameFrom es) $ S.toList $ alf ccs'
+    es' = S.filter (cameFrom es) $ alf ccs'
 iFrom i (Ren pfn ccs) = (Ren pfn ccs',i')
   where (ccs',i') = iFrom i ccs
 iFrom i (Rec nm ccs) = (Rec nm ccs',i')
@@ -64,8 +64,8 @@ iPfx _ pfx = pfx
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
 
-cameFrom :: [IxLab] -> IxLab -> Bool
-cameFrom es e = (root . fst) e `elem` map (root . fst) es
+cameFrom :: (Set IxLab) -> IxLab -> Bool
+cameFrom es e = (root . fst) e `S.member` S.map (root . fst) es
 \end{code}
 
 Given a CCS term, return a mapping from events
@@ -137,7 +137,7 @@ gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
 \\ g^*(S,B) &\defeq& \bigcup\{ g^*(S,a_i) \mid a_i \in B \}
 \end{eqnarray*}
 \begin{code}
-gsb iCtxt ilbls = concat $ map (S.toList . gsa2 iCtxt) ilbls
+gsb iCtxt ilbls = S.unions $ S.map (gsa2 iCtxt) ilbls
 \end{code}
 
 
@@ -217,7 +217,8 @@ gsp iCtxt (Sum ccs1 ccs2)       =  csum $ map (gsp iCtxt) [ccs1,ccs2]
 gsp iCtxt (Rec x ccs)           =  Rec x $ gsp iCtxt ccs
 gsp iCtxt (Rstr lbls ccs)       =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
 gsp iCtxt (Ren f ccs)           =  Ren f $ gsp iCtxt ccs
-gsp iCtxt (Par [] ccs1 ccs2)    =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
+gsp iCtxt (Par nms ccs1 ccs2)
+ | S.null nms                   =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
                                           $ map alf [ccs1,ccs2]
 gsp iCtxt (Pfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
@@ -256,10 +257,10 @@ c2star iCtxt ccs
      ccsi = c2ix ccs
      ccsa = alf ccsi
      iCtxt' = iCtxt `S.union` ccsa
-     res = S.toList $ S.unions $ S.map (gsa2 iCtxt') ccsa
+     res = S.unions $ S.map (gsa2 iCtxt') ccsa
    in Rstr res $ gsp iCtxt ccsi
 \end{code}
- 
+
 \subsection{Translate toward CSP}
 
 Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
@@ -268,7 +269,7 @@ Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
    conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
 \end{eqnarray*}
 
-We implement this as a prefix transform $tlp$:
+We partially implement this as a prefix transform $tlp$:
 \begin{code}
 tlp :: IxLab -> Prefix
 tlp ix        =  Evt $ tll ix
@@ -280,11 +281,6 @@ tli (One i)   =  "_"++show i
 tli (Two i j) =  "_"++show i++"_"++show j
 \end{code}
 
-For $P$ a CCS process, recall ``after-tau'':
-$
-   \circ\tau(P) \defeq
-     \{ P' \mid P \trans\tau P' \}
-$.
 
 \begin{eqnarray*}
    tl(0)               &\defeq& STOP
@@ -298,6 +294,15 @@ $.
 \\ tl(X)               &\defeq& X
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
 \end{eqnarray*}
+For $P$ a CCS process, recall ``after-tau'':
+$
+   \circ\tau(P) \defeq
+     \{ P' \mid P \trans\tau P' \}
+$.
+
+We implement $conm$ within $tl$ here, by using $tlp$ above,
+and dealing with the parallel sync and restriction sets explicitly below.
+This covers all the places where labels occurs in CCS.
 \begin{code}
 tl :: Proc -> Proc
 tl Zero                   =  Zero
@@ -313,11 +318,15 @@ tl (Sum ccs1 ccs2)
         csps2 = map tl (afterTau ccs2)
         afters = csps1 ++ csps2
         sum = foldl1 Sum
-tl (Par [] ccs1 ccs2)     =  Par sync csp1 csp2
-  where csp1 =  tl(ccs1)
-        csp2 =  tl(ccs2)
-        sync  =  map tll $ S.toList (alf csp1 `S.union` alf csp2)
-tl (Rstr ixs ccs)         =  Par (map tll ixs) (tl ccs) Zero
+tl (Par nms ccs1 ccs2)
+  | S.null nms
+  =  Par sync csp1 csp2
+  where csp1  =  tl(ccs1)
+        csp2  =  tl(ccs2)
+        alf1  =  S.map tll $ alf csp1
+        alf2  =  S.map tll $ alf csp2
+        sync  =  alf1 `S.intersection` alf2
+tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Zero
 tl ccs                    =  ccs
 \end{code}
 
@@ -325,7 +334,7 @@ tl ccs                    =  ccs
 
 
 \begin{eqnarray*}
-    t2csp(P) &\defeq& tl(conm(c4star(P)))
+    t2csp(S,P) &\defeq& tl(conm(c4star(S,P)))
 \end{eqnarray*}
 \begin{code}
 t2csp :: Proc -> Proc
@@ -333,127 +342,127 @@ t2csp ccs = tl $ c4star S.empty ccs
 \end{code}
 
 
-\newpage
-\subsection{Old Stuff}
-
-\textbf{No Longer sure what the following is about}
-
-We use $\Sigma_i a_i . P$ as shorthand for $\Sigma_i (a_i . p)$,
-and we consider $a_{ij}$, $a_{ji}$ to be the same,
-with $i\neq j$.
-We also use $\alpha$ to
-range over $a,b,c,\dots$ and $\bar a,\bar b, \bar c,\dots$.
-
-\begin{eqnarray*}
-   pre\!-\!g_T(P) &=& namesOf(P) \subseteq dom(T)
-\\ g_T(0)
-   &\defeq& 0
-\\ g_T(\alpha_i.P)
-   &\defeq&
-   (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
-\\ g_T(P|Q)
-   &\defeq&
-   \left( g_T(P) | g_T(Q) \right)
-   \setminus
-   \{\alpha_{ij} \mid \alpha_i \in P, \bar\alpha_j \in Q\}
-\\ g_T(P+Q)
-   &\defeq&
-   \left( g_T(P) + g_T(Q) \right)
-\\ g_T(P\setminus L)
-   &\defeq&
-   g_T(P)\setminus g'_T(L) \quad \textrm{can this be the identity?}
-\\ g_T(P[f])
-   &\defeq&
-   g_T(P)[f]
-\\ g_T(X)
-   &\defeq&
-   X
-\\ g_T(\mu X \bullet P)
-   &\defeq&
-   \mu X \bullet g_T(P)
-\end{eqnarray*}
-
-\begin{code}
-ccs2star :: Proc -> Proc
-ccs2star ccs
- = c2star imap iccs
- where  iccs = indexNames ccs
-        imap = indexMap iccs
-
-        c2star :: IxMap -> Proc -> Proc
-
-        c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
-          = sumPrefixes imap alfa i $ c2star imap ccs
-
-        c2star imap (Par [] ccs1 ccs2)
-          = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
-                 $ cpar $ map (c2star imap) [ccs1,ccs2]
-
-        c2star imap (Sum ccs1 ccs2) = csum $ map (c2star imap) [ccs1,ccs2]
-
-        c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
-
-        c2star imap (Ren f ccs) = Ren f $ c2star imap ccs
-
-        c2star imap (Rec x ccs) = Rec x $ c2star imap ccs
-
-        c2star imap ccs = ccs -- 0, X
-\end{code}
-
-\begin{eqnarray*}
-\\ g_T(\alpha_i.P)
-   &\defeq&
-   (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
-\end{eqnarray*}
-\begin{code}
-sumPrefixes :: IxMap -> Label -> Int -> Proc -> Proc
-sumPrefixes imap alfa i ccs
-  = case M.lookup (bar alfa) imap of
-      Nothing  ->  Pfx (Lbl (alfa,One i)) ccs
-      Just evts
-        -> let alpha2s = map (mkSyncEvt alfa i) $ S.toList evts
-           in csum $ map (affix ccs) ((alfa,One i):alpha2s)
-
-mkSyncEvt alfa i (One j) = i2event alfa i j
-affix ccs e = Pfx (Lbl e) ccs
-\end{code}
-
-\begin{eqnarray*}
-   g_T(P|Q)
-   &\defeq&
-   \left( g_T(P) | g_T(Q) \right)
-   \setminus
-   \{\alpha_{ij} \mid \alpha_i \in P, \bar\alpha_j \in Q\}
-\\ g_T(\Pi_p P_p)
-   &\defeq&
-   \left( \Pi_p g_T(P_p) \right)
-   \setminus
-   \{\alpha_{ij} \mid \alpha_i \in P_m, \bar\alpha_j \in P_n, m \neq n\}
-\end{eqnarray*}
-\begin{code}
-syncPre :: [[Prefix]] -> [IxLab]
-syncPre = concat . findSync syncPre1
-
---
-syncPre1 :: [Prefix] -> [Prefix] -> [[IxLab]]
-syncPre1 ps1 ps2 = map (f ps1) ps2
- where f ps1 p2 = concat $ map (syncPre2 p2) ps1
-\end{code}
-
-\begin{code}
-syncPre2 :: Prefix -> Prefix -> [IxLab]
-syncPre2 (Lbl (Std m,One i)) (Lbl (Bar n,One j)) | m == n  =  syncE m i j
-syncPre2 (Lbl (Bar m,One i)) (Lbl (Std n,One j)) | m == n  =  syncE m i j
-syncPre2 _                   _                             =  []
-
-syncE s i j = [i2event (Std s) i j]
-\end{code}
-
-
-We need the following
-\begin{code}
-findSync :: (a -> a -> [b]) -> [a] -> [b]
-findSync op [] = []
-findSync op [_] = []
-findSync op (as:ass) = concat (map (op as) ass) ++ findSync op ass
-\end{code}
+% \newpage
+% \subsection{Old Stuff}
+%
+% \textbf{No Longer sure what the following is about}
+%
+% We use $\Sigma_i a_i . P$ as shorthand for $\Sigma_i (a_i . p)$,
+% and we consider $a_{ij}$, $a_{ji}$ to be the same,
+% with $i\neq j$.
+% We also use $\alpha$ to
+% range over $a,b,c,\dots$ and $\bar a,\bar b, \bar c,\dots$.
+%
+% \begin{eqnarray*}
+%    pre\!-\!g_T(P) &=& namesOf(P) \subseteq dom(T)
+% \\ g_T(0)
+%    &\defeq& 0
+% \\ g_T(\alpha_i.P)
+%    &\defeq&
+%    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
+% \\ g_T(P|Q)
+%    &\defeq&
+%    \left( g_T(P) | g_T(Q) \right)
+%    \setminus
+%    \{\alpha_{ij} \mid \alpha_i \in P, \bar\alpha_j \in Q\}
+% \\ g_T(P+Q)
+%    &\defeq&
+%    \left( g_T(P) + g_T(Q) \right)
+% \\ g_T(P\setminus L)
+%    &\defeq&
+%    g_T(P)\setminus g'_T(L) \quad \textrm{can this be the identity?}
+% \\ g_T(P[f])
+%    &\defeq&
+%    g_T(P)[f]
+% \\ g_T(X)
+%    &\defeq&
+%    X
+% \\ g_T(\mu X \bullet P)
+%    &\defeq&
+%    \mu X \bullet g_T(P)
+% \end{eqnarray*}
+%
+% \begin{code}
+% ccs2star :: Proc -> Proc
+% ccs2star ccs
+%  = c2star imap iccs
+%  where  iccs = indexNames ccs
+%         imap = indexMap iccs
+%
+%         c2star :: IxMap -> Proc -> Proc
+%
+%         c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
+%           = sumPrefixes imap alfa i $ c2star imap ccs
+%
+%         c2star imap (Par [] ccs1 ccs2)
+%           = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
+%                  $ cpar $ map (c2star imap) [ccs1,ccs2]
+%
+%         c2star imap (Sum ccs1 ccs2) = csum $ map (c2star imap) [ccs1,ccs2]
+%
+%         c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
+%
+%         c2star imap (Ren f ccs) = Ren f $ c2star imap ccs
+%
+%         c2star imap (Rec x ccs) = Rec x $ c2star imap ccs
+%
+%         c2star imap ccs = ccs -- 0, X
+% \end{code}
+%
+% \begin{eqnarray*}
+% \\ g_T(\alpha_i.P)
+%    &\defeq&
+%    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
+% \end{eqnarray*}
+% \begin{code}
+% sumPrefixes :: IxMap -> Label -> Int -> Proc -> Proc
+% sumPrefixes imap alfa i ccs
+%   = case M.lookup (bar alfa) imap of
+%       Nothing  ->  Pfx (Lbl (alfa,One i)) ccs
+%       Just evts
+%         -> let alpha2s = map (mkSyncEvt alfa i) $ S.toList evts
+%            in csum $ map (affix ccs) ((alfa,One i):alpha2s)
+%
+% mkSyncEvt alfa i (One j) = i2event alfa i j
+% affix ccs e = Pfx (Lbl e) ccs
+% \end{code}
+%
+% \begin{eqnarray*}
+%    g_T(P|Q)
+%    &\defeq&
+%    \left( g_T(P) | g_T(Q) \right)
+%    \setminus
+%    \{\alpha_{ij} \mid \alpha_i \in P, \bar\alpha_j \in Q\}
+% \\ g_T(\Pi_p P_p)
+%    &\defeq&
+%    \left( \Pi_p g_T(P_p) \right)
+%    \setminus
+%    \{\alpha_{ij} \mid \alpha_i \in P_m, \bar\alpha_j \in P_n, m \neq n\}
+% \end{eqnarray*}
+% \begin{code}
+% syncPre :: [[Prefix]] -> [IxLab]
+% syncPre = concat . findSync syncPre1
+%
+% --
+% syncPre1 :: [Prefix] -> [Prefix] -> [[IxLab]]
+% syncPre1 ps1 ps2 = map (f ps1) ps2
+%  where f ps1 p2 = concat $ map (syncPre2 p2) ps1
+% \end{code}
+%
+% \begin{code}
+% syncPre2 :: Prefix -> Prefix -> [IxLab]
+% syncPre2 (Lbl (Std m,One i)) (Lbl (Bar n,One j)) | m == n  =  syncE m i j
+% syncPre2 (Lbl (Bar m,One i)) (Lbl (Std n,One j)) | m == n  =  syncE m i j
+% syncPre2 _                   _                             =  []
+%
+% syncE s i j = [i2event (Std s) i j]
+% \end{code}
+%
+%
+% We need the following
+% \begin{code}
+% findSync :: (a -> a -> [b]) -> [a] -> [b]
+% findSync op [] = []
+% findSync op [_] = []
+% findSync op (as:ass) = concat (map (op as) ass) ++ findSync op ass
+% \end{code}

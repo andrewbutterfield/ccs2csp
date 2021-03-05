@@ -139,15 +139,15 @@ data Proc                   -- which? CSS? CSP? both?
   | Seq Proc Proc           -- CSP ;
   | Sum Proc Proc           -- both + |~|
   | Ext Proc Proc           -- CSP []
-  | Par [String] Proc Proc  -- both  | |..|
-  | Rstr [IxLab] Proc       -- both |' \
+  | Par (Set String) Proc Proc  -- both  | |..|
+  | Rstr (Set IxLab) Proc       -- both |' \
   | Ren RenFun Proc         -- both  _[f]  f(_)
   | PVar String             -- both
   | Rec String Proc         -- both
   deriving (Eq,Ord,Read)
 
 comp :: Proc -> Proc -> Proc
-comp = Par []
+comp = Par S.empty
 
 isCCS :: Proc -> Bool
 isCCS Skip             =  False
@@ -155,7 +155,7 @@ isCCS (Seq _ _)        =  False
 isCCS (Ext _ _)        =  False
 isCCS (Pfx _ prc)      =  isCCS prc
 isCCS (Sum p1 p2)      =  isCCS p1 && isCCS p2
-isCCS (Par nms p1 p2)  =  null nms && isCCS p1 && isCCS p2
+isCCS (Par nms p1 p2)  =  S.null nms && isCCS p1 && isCCS p2
 isCCS (Rstr _ prc)     =  isCCS prc
 isCCS (Ren _ prc)      =  isCCS prc
 isCCS (Rec _ prc)      =  isCCS prc
@@ -202,17 +202,17 @@ renameStr s ((f,t):s2s)
 
 \begin{code}
 alf :: Proc -> Set IxLab
-alf Zero           =  S.empty
-alf Skip           =  S.empty
-alf (Pfx pfx prc)  =  alfPfx pfx `S.union` alf prc
+alf Zero            =  S.empty
+alf Skip            =  S.empty
+alf (Pfx pfx prc)   =  alfPfx pfx `S.union` alf prc
 alf (Seq p1 p2)     =  alf p1 `S.union` alf p2
 alf (Sum p1 p2)     =  alf p1 `S.union` alf p2
 alf (Ext p1 p2)     =  alf p1 `S.union` alf p2
 alf (Par nms p1 p2) =  alf p1 `S.union` alf p2
-alf (Rstr es prc)  =  alf prc
-alf (Ren s2s prc)  =  S.map (renameEvt s2s) $ alf prc
-alf (PVar s)       =  S.empty
-alf (Rec s prc)    =  alf prc
+alf (Rstr es prc)   =  alf prc
+alf (Ren s2s prc)   =  S.map (renameEvt s2s) $ alf prc
+alf (PVar s)        =  S.empty
+alf (Rec s prc)     =  alf prc
 
 alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
@@ -253,12 +253,12 @@ instance Show Proc where
 
   showsPrec p (Seq p1 p2) = showsInfix p pSeq pSeq' showSeq [p1,p2]
 
-  showsPrec p (Rstr [] prc) = showsPrec p prc
   showsPrec p (Rstr es prc)
-    = showParen (p > pRstr) $
-        showsPrec pRstr' prc .
-        showString "|'" .
-        showEvents es
+   | S.null es  =  showsPrec p prc
+   | otherwise  = showParen (p > pRstr) $
+                    showsPrec pRstr' prc .
+                    showString "|'" .
+                    showEvents (S.toList es)
 
   showsPrec p (Ren s2s prc)
     = showParen (p > pRen) $
@@ -290,10 +290,10 @@ showSum p ccss  = showI p " + " ccss
 showExt p ccss = showI p " [] " ccss
 
 showPar nms p ccss
-  | null nms = showI p " | " ccss
+  | S.null nms = showI p " | " ccss
   | otherwise  = showI p (" |"++showNms nms++"| ") ccss
 
-showNms nms = concat $ intersperse "," nms
+showNms nms = concat $ intersperse "," $ S.toList nms
 
 showSeq p ccss = showI p " ; " ccss
 
@@ -346,7 +346,7 @@ cpar (prc:prcs) = comp prc $ cpar prcs
 
 rstr :: [IxLab] -> Proc -> Proc
 rstr [] prc = prc
-rstr es prc = Rstr es prc
+rstr es prc = Rstr (S.fromList es) prc
 
 endo :: Eq a => [(a,a)] -> a -> a
 endo [] a = a
@@ -377,9 +377,9 @@ doRename s2s (Pfx pfx prc)   =  Pfx (renPfx s2s pfx) $ doRename s2s prc
 doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
 doRename s2s (Seq p1 p2)      =  Seq (doRename s2s p1) (doRename s2s p2)
 doRename s2s (Ext p1 p2)      =  Ext (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Par nms p1 p2)  =  Par (map s2s nms)
+doRename s2s (Par nms p1 p2)  =  Par (S.map s2s nms)
                                      (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Rstr es prc)   =  Rstr (map (renIxLab s2s) es) $ doRename s2s prc
+doRename s2s (Rstr es prc)   =  Rstr (S.map (renIxLab s2s) es) $ doRename s2s prc
 doRename s2s (Ren s2s' prc)  =  doRename s2s (doRename (endo s2s') prc)
 doRename s2s (Rec s prc)     =  Rec s $ doRename s2s prc
 doRename _   prc             = prc

@@ -66,7 +66,8 @@ afterTau :: Proc -> [Proc]
 afterTau (Pfx T ccs)         =  [ccs]
 afterTau (Pfx (T' _) ccs)    =  [ccs] -- considered a tau...?
 afterTau (Sum ccs1 ccs2)     =  [ccs1,ccs2]
-afterTau (Par [] ccs1 ccs2)  =  parBodiesAfterTaus ccs1 ccs2
+afterTau (Par nms ccs1 ccs2)
+ | S.null nms                =  parBodiesAfterTaus ccs1 ccs2
 afterTau (Rstr es ccs)       =  afterTau ccs
 afterTau (Ren s2s ccs)       =  afterTau ccs
 afterTau (Rec s ccs)         =  afterTau ccs
@@ -130,7 +131,8 @@ afterEvt :: IxLab -> Proc -> [Proc]
 afterEvt evt (Pfx (Lbl evt') ccs)
   | evt == evt'                =  [ccs]
 afterEvt evt (Sum p1 p2)        =  concat $ map (afterEvt evt) [p1,p2]
-afterEvt evt (Par [] ccs1 ccs2) =  parBodiesAfterEvts ccs1 ccs2
+afterEvt evt (Par nms ccs1 ccs2)
+ | S.null nms  =  parBodiesAfterEvts ccs1 ccs2
 afterEvt evt (Rstr es ccs)
   | not (evt `elem` es)        =  afterEvt evt ccs
 afterEvt evt (Ren s2s ccs)     =  afterEvt evt $ doRename (endo s2s) ccs

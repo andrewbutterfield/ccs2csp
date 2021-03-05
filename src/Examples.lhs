@@ -32,7 +32,7 @@ ell = (Std "L",None)
 q = PVar "Q"
 cc44 = csum [ r
             , cpar [ Pfx a p
-                   , Pfx b (Rstr [ell] q)
+                   , Pfx b (Rstr (S.singleton ell) q)
                    ]
             ]
 \end{code}
@@ -42,7 +42,8 @@ Examples from Gerard's document, v17.
 -- v17, 4.1.2, p18
 s = PVar "S"
 abar = pfxbar a
-x18 = Rstr [ea] $ cpar [Pfx a p, cpar [Pfx abar q, cpar [Pfx abar r, Pfx abar s]]]
+x18 = Rstr (S.singleton ea)
+       $ cpar [Pfx a p, cpar [Pfx abar q, cpar [Pfx abar r, Pfx abar s]]]
 
 --v17, 4.1.2., p19
 xl19 = cpar [Pfx a Zero, Pfx abar Zero]
@@ -94,14 +95,15 @@ Examples from [GEN, v19 Note4+] and [VK Note 4]
 \begin{code}
 mkExample ccs
  = putStrLn $ unlines $ map shExample
-            $ zip ["ccs ","c2ix","g*0 ","cs2 ","csp "]
-                  [ ccs  , ccsi , ccsg , ccs2 , csp  ]
+            $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","csp  ","t2csp"]
+                  [ ccs   , ccsi  , ccsg  , ccs4  , csp   , tcsp   ]
  where
    shExample (label,proc) = label ++ " : " ++ show proc
    ccsi = indexNames ccs
    ccsg = gsp0 ccsi
-   ccs2 = c2star S.empty ccs
-   csp = tl ccs2
+   ccs4 = c4star S.empty ccs
+   csp  = tl ccs4
+   tcsp = t2csp ccs
 
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
@@ -110,7 +112,7 @@ xmp_aIabar = mkExample aIabar
 
 -- p21 g*({},(a.0 | a-bar.0)|' {a})
    -- =  ((a1.0+a12.0)|(a2-bar.0+a12-bar.0)) |' {a1,a2}
-noaIabar = Rstr [ea] aIabar
+noaIabar = Rstr (S.singleton ea) aIabar
 xmp_noaIabar = mkExample noaIabar
 
 -- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
@@ -149,8 +151,8 @@ not enclosing it.
 ever :: IxLab -> Proc
 ever evt = Rec "X" $ Pfx (Lbl $ evtbar evt) $ PVar "X"
 infixl 7 \\
-(\\) :: Proc -> [IxLab] -> Proc
-ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever ilbls)
+(\\) :: Proc -> (Set IxLab) -> Proc
+ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
 \end{code}
 
 Here we want to prove(?) that
@@ -161,5 +163,5 @@ Here we want to prove(?) that
 prop_gstar_hide evts ccs ilbls
  = gsp evts (ccs \\ ilbls)
    ==
-   gsp evts ccs \\ gsb (evts `S.union` S.fromList ilbls) ilbls
+   gsp evts ccs \\ gsb (evts `S.union` ilbls) ilbls
 \end{code}
