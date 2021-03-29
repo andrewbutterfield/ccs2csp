@@ -256,7 +256,7 @@ gsp0 = gsp S.empty
    c4star(S,P) &\defeq& g^*(S,c2ix(P))
 \\ c2star(S,P)
    &\defeq&
-   c4star(S,P)\restrict \{g\pi_2(S \cup \Alf c2ix(P),a_i)\mid a_i \in \Alf c2ix(P)\}
+   c4star(S,P)\restrict \{g\pi_2(S,a_i)\mid a_i \in \Alf c2ix(P)\}
 \end{eqnarray*}
 \begin{code}
 c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
@@ -264,8 +264,7 @@ c2star iCtxt ccs
  = let
      ccsi = c2ix ccs
      ccsa = getCCSLbls ccsi
-     iCtxt' = iCtxt `S.union` ccsa
-     res = S.unions $ S.map (gsa2 iCtxt') ccsa
+     res = S.unions $ S.map (gsa2 iCtxt) ccsa
    in Rstr res $ gsp iCtxt ccsi
 \end{code}
 
@@ -302,6 +301,10 @@ tli (Two i j) =  "_"++show i++"_"++show j
 \\ tl(X)               &\defeq& X
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
 \end{eqnarray*}
+\textbf{Note: }
+We might introduce a ``tau'' event ($tau$) to CSP
+and use $tl(\tau.P)=tau.tl(P)$.
+
 For $P$ a CCS process, recall ``after-tau'':
 $
    \circ\tau(P) \defeq
@@ -339,14 +342,13 @@ tl ccs                    =  ccs
 \end{code}
 
 
-
-
+For $P$ a CCSTau process:
 \begin{eqnarray*}
     t2csp(S,P) &\defeq& tl(conm(c4star(S,P)))
 \end{eqnarray*}
 \begin{code}
-t2csp :: Proc -> Proc
-t2csp ccs = tl $ c4star S.empty ccs
+t2csp :: Set IxLab -> Proc -> Proc
+t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 \end{code}
 
 

@@ -103,7 +103,7 @@ mkExample ccs
    ccsg = gsp0 ccsi
    ccs4 = c4star S.empty ccs
    tlp  = tl ccs4
-   csp = t2csp ccs
+   csp = t2csp S.empty ccs
 
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
