@@ -144,7 +144,7 @@ gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
 \end{eqnarray*}
 \begin{code}
 gsb :: Set IxLab -> Set IxLab -> Set IxLab
-gsb iCtxt ilbls = S.unions $ S.map (gsa2 iCtxt) ilbls
+gsb iCtxt ilbls = S.unions $ S.map (gsa iCtxt) ilbls
 \end{code}
 
 

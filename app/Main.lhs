@@ -14,7 +14,7 @@ import Translate
 
 import Debug.Trace
 dbg msg x = trace (msg++show x) x
-pdbg nm x = dbg ('@':nm++":\n") x
+pdbg nm x = Main.dbg ('@':nm++":\n") x
 \end{code}
 
 \subsection{Version}
