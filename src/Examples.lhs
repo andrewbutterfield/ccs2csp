@@ -21,7 +21,24 @@ import Semantics
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
-Milners ``Comms and Conc'' book.
+\subsection{Showing Examples}
+
+\begin{code}
+mkExample ccs
+ = putStrLn $ unlines $ map shExample
+            $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","tlp  ","t2csp"]
+                  [ ccs   , ccsi  , ccsg  , ccs4  , tlp   , csp   ]
+ where
+   shExample (label,proc) = label ++ " : " ++ show proc
+   ccsi = indexNames ccs
+   ccsg = gsp0 ccsi
+   ccs4 = c4star S.empty ccs
+   tlp  = tl ccs4
+   csp = t2csp S.empty ccs
+\end{code}
+
+\subsection{Milners ``Comms and Conc'' book.}
+
 \begin{code}
   -- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
 na = Std "a" ; ea = (na,None);  a = Lbl ea
@@ -36,6 +53,92 @@ cc44 = csum [ r
                    ]
             ]
 \end{code}
+
+\subsection{Gerard's Examples (recent)}
+
+Based on G. Ekembe N., ``From CCS to CSP'', April 15th 2021:
+
+\paragraph{Defn 3.1, p11}
+
+\begin{eqnarray*}
+  c2ccs\tau(P|Q)
+  &\defeq&
+ (c2ccs\tau(P)|_T c2ccs\tau(Q))
+ \hide_T
+ \{\tau[\bar a|a] | a \in \Alf P, \bar a \in \Alf Q\}
+\end{eqnarray*}
+
+\paragraph{Lemma 1, p12}
+
+For CCSTau processes:
+\begin{equation*}
+   P_\tau | Q_\tau
+   =
+   (P_\tau |_T Q_\tau)
+   \hide_T
+   \{\tau[\bar a|a] | a \in \Alf P, \bar a \in \Alf Q\}
+\end{equation*}
+
+\paragraph{Defn 4.8, p21}
+
+\begin{eqnarray*}
+   \vdots
+\\ tl(P_1 | P_2)
+   &\defeq&
+   tl(P_1) \parallel_{\setof{a | a \in \Alf P_1 \cap \Alf P_2}} tl(P_2)
+\\ \vdots
+\end{eqnarray*}
+
+\paragraph{Example 4.7, p21}
+
+\begin{eqnarray*}
+   c4star(a.0|\bar a.0)
+   &=&
+   (a_1.0 + a_{12}.0)|(\bar a_2.0 + \bar a_{12}.0)
+\\ c4star(a.0|\bar a.0)
+   &=&
+   (a_1.0 + a_{12}.0)|(a_2.0 + a_{12}.0)
+\\ tl(c4star(a.0|\bar a.0))
+   &=&
+   (a_1 \then Stop \extc a_{12} \then Stop)
+   \parallel_{\setof{a_12}}
+   (a_2 \then Stop \extc a_{12} \then Stop)
+\end{eqnarray*}
+
+\paragraph{Example 4.8, pp23--4}
+
+\begin{eqnarray*}
+   (a.0|\bar a.0)\restrict \setof{a} + b.0
+   &\equiv& \tau.0 + b.0
+\end{eqnarray*}
+
+\begin{eqnarray*}
+   && t2csp((a.0|\bar a.0)\restrict \setof{a} + b.0)
+\\&=& ccs-par\; def
+\\ && t2csp((a.0|_T\bar a.0)\hide_T \setof{a} + b.0)
+\\&=& t2csp\; def
+\\ && t2csp((a.0|_T\bar a.0)\hide_T \setof{a} \restrict\setof a) \extc  t2csp(b.0)
+\\&=& t2csp\; def
+\\ && ((a_1 \then Stop \extc a_{12} \then Stop)
+\parallel_{\setof{a_12}}
+(a_2 \then Stop \extc a_{12} \then Stop))
+       \hide_{csp} \setof{a_1,a_2,a_{12}}
+       \restrict_{csp}\setof{a_1,a_2})
+      \extc  b \then STOP
+\end{eqnarray*}
+
+
+\paragraph{Defn 4.8, p21}
+
+Should be:
+\begin{eqnarray*}
+    CCS: && Stop \extc b \then Stop
+\\  CCS\tau: && a_{12} \then Stop \extc b \then Stop
+\end{eqnarray*}
+
+
+
+\subsection{Old Examples}
 
 Examples from Gerard's document, v17.
 \begin{code}
@@ -93,18 +196,6 @@ xms2 = cpar [ Pfx a (Pfx b (cpar [ Pfx abar Zero, Pfx b Zero]))
 Examples from [GEN, v19 Note4+] and [VK Note 4]
 
 \begin{code}
-mkExample ccs
- = putStrLn $ unlines $ map shExample
-            $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","tlp  ","t2csp"]
-                  [ ccs   , ccsi  , ccsg  , ccs4  , tlp   , csp   ]
- where
-   shExample (label,proc) = label ++ " : " ++ show proc
-   ccsi = indexNames ccs
-   ccsg = gsp0 ccsi
-   ccs4 = c4star S.empty ccs
-   tlp  = tl ccs4
-   csp = t2csp S.empty ccs
-
 -- GEN: v19 Note 4 (update):
 -- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
 aIabar = cpar [a0,abar0]
@@ -127,6 +218,9 @@ xmp_bAndaIabar = mkExample bAndaIabar
 -- ( a1 \restrict a1 |  a2-bar)[g*,0]
     -- -->  (a1+a12)\restrict a1,a12 | a2-bar + a12-bar
 \end{code}
+
+
+\subsection{CSP Hiding in CCS}
 
 
 In [GEN v18, Def 2.1, p7] we have:
