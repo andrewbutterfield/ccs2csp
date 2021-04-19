@@ -17,7 +17,7 @@ import Semantics
 
 import Debug.Trace
 dbg msg x = trace (msg++show x) x
-pdbg nm x = dbg ("\n@"++nm++":\n") x
+pdbg nm x = Translate.dbg ("\n@"++nm++":\n") x
 \end{code}
 
 This section is based mainly on

@@ -13,8 +13,9 @@ import Control.Monad
 import Control
 import Syntax
 
---import Debug.Trace
---dbg msg x = trace (msg++show x) x
+import Debug.Trace
+dbg msg x = trace (msg++show x) x
+pdbg name  = Semantics.dbg (name++" = ")
 \end{code}
 
 \subsection{CCS Semantics}
@@ -55,28 +56,45 @@ we replace $Com_3$ with
 \]
 For now,
 we want a function ("after-tau")
-that returns a list of processes that can result from a tau event.
+that returns the set of processes that can result from a tau event.
 \begin{eqnarray*}
    \circ\tau &:& Proc \fun Proc^*
 \\ \circ\tau(P) &\defeq& \{ P' \mid P \trans\tau P' \}
 \end{eqnarray*}
+
+We reify this as follows:
+\begin{eqnarray*}
+   \circ\tau(0) &\defeq& \setof{}
+\\ \circ\tau(\tau.P) &\defeq& \setof{P}
+\\ \circ\tau(\tau[\ell|\overline\ell].P) &\defeq& \setof{}
+\\ \circ\tau(\ell.P) &\defeq& \setof{}
+\\ \circ\tau(P_1+P_2) &\defeq& \circ\tau(P_1) \cup \circ\tau(P_2)
+\\ \circ\tau(P_1 | P_2) &\defeq&  \circ\tau^2(P_1,P_2)
+\\ \circ\tau(P\restrict L) &\defeq& \circ\tau(P)
+\\ \circ\tau(P[f]) &\defeq& \setof{ P'[f] \mid P' \in \circ\tau(P)}
+\\ \circ\tau(\mu X \bullet P) &\defeq& \setof{}
+\end{eqnarray*}
+In the last line we assume (promptly) guarded recursion.
 \begin{code}
 -- isCCS
 afterTau :: Proc -> [Proc]
 afterTau (Pfx T ccs)         =  [ccs]
-afterTau (Pfx (T' _) ccs)    =  [ccs] -- considered a tau...?
-afterTau (Sum ccs1 ccs2)     =  [ccs1,ccs2]
+afterTau (Pfx (T' _) ccs)    =  [] -- not considered a tau here !
+afterTau (Sum ccs1 ccs2)     =  afterTau ccs1 ++ afterTau ccs2
 afterTau (Par nms ccs1 ccs2)
  | S.null nms                =  parBodiesAfterTaus ccs1 ccs2
 afterTau (Rstr es ccs)       =  afterTau ccs
-afterTau (Ren s2s ccs)       =  afterTau ccs
-afterTau (Rec s ccs)         =  afterTau ccs
+afterTau (Ren s2s ccs)       =  map (Ren s2s) $ afterTau ccs
+afterTau (Rec s ccs)         =  []
 afterTau _                   =  [] -- the rest, incl CSP stuff
 \end{code}
 
 A parallel can produce a tau event in two ways:
 (i) one of its processes performs a tau;
-or (ii) two of its processes comunicate.
+or (ii) two of its processes communicate.
+\begin{eqnarray*}
+   \circ\tau^2(P_1,P_2) &\defeq& \dots
+\end{eqnarray*}
 \begin{code}
 parBodiesAfterTaus :: Proc -> Proc -> [Proc]
 parBodiesAfterTaus ccs1 ccs2
