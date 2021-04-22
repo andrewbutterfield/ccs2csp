@@ -98,7 +98,7 @@ or (ii) two of its processes communicate.
 \begin{code}
 parBodiesAfterTaus :: Proc -> Proc -> [Proc]
 parBodiesAfterTaus ccs1 ccs2
-  =  parBodiesAfterOwnTaus ccs1 ccs2 ++ parBodiesAfterComTaus ccs1 ccs2
+  =  parBodiesAfterOwnTaus ccs1 ccs2 -- ++ parBodiesAfterComTaus ccs1 ccs2
 \end{code}
 
 Given $P_1 | \dots | P_i | \dots | P_n$,
@@ -126,7 +126,7 @@ When $n=2$, we simply compute
 \begin{code}
 parBodiesAfterComTaus :: Proc -> Proc -> [Proc]
 parBodiesAfterComTaus ccs1 ccs2
-  = crossmap comp ccs1s' ccs2s'
+  = crossmap comp ccs1s' ccs2s' -- wrong! sum, not product
   where
     alf1 = alf ccs1
     alf2 = alf ccs2
