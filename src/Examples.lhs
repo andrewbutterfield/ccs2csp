@@ -43,6 +43,7 @@ mkExample ccs
   -- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
 na = Std "a" ; ea = (na,None);  a = Lbl ea
 nb = Std "b" ; b = Lbl (nb,None)
+nc = Std "c" ; ec = (nc,None); c = Lbl ec
 r = PVar "R"
 p = PVar "P"
 ell = (Std "L",None)
@@ -219,7 +220,23 @@ xmp_bAndaIabar = mkExample bAndaIabar
     -- -->  (a1+a12)\restrict a1,a12 | a2-bar + a12-bar
 \end{code}
 
-
+\begin{code}
+ac0 = Pfx a $ Pfx c Zero
+acIabar = cpar [ac0,abar0]
+noacIabar = Rstr (S.singleton ea) acIabar
+bAndacIabar = csum [noacIabar,b0]
+xmp_bAndacIabar = mkExample bAndacIabar
+\end{code}
+\begin{verbatim}
+*Examples> xmp_bAndacIabar
+ccs   : (a.c | a-bar)|'a + b
+c2ix  : (a1.c2 | a3-bar)|'{a1,a3-bar} + b4
+g*0   : ((a1.c2 + a1;3.c2) | (a3-bar + a1;3-bar))|'{a1,a3-bar} + b4
+cs4   : ((a1.c2 + a1;3.c2) | (a3-bar + a1;3-bar))|'{a1,a3-bar} + b4
+tlp   : ((a_1.c_2 [] a_1_3.c_2) |a_1_3| (a_3 [] a_1_3)) |a_1,a_3| 0 [] b_4 + c_2 | 0
+t2csp : ((a_1.c_2 [] a_1_3.c_2) |a_1_3| (a_3 [] a_1_3)) |a_1,a_3| 0 [] b_4 + c_2 | 0
+\end{verbatim}
+We should not have \verb"c_2" at the end, just \verb"b_4".
 \subsection{CSP Hiding in CCS}
 
 
