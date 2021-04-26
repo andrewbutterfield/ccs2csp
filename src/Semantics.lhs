@@ -92,6 +92,9 @@ afterTau _                   =  [] -- the rest, incl CSP stuff
 A parallel can produce a tau event in two ways:
 (i) one of its processes performs a tau;
 or (ii) two of its processes communicate.
+If we are translating from $ccs\tau$,
+then communications are ``visible'' taus,
+which should not count here.
 \begin{eqnarray*}
    \circ\tau^2(P_1,P_2) &\defeq& \dots
 \end{eqnarray*}
@@ -122,19 +125,28 @@ where $\ell \in \Alf(P_i)$ and $\bar\ell \in \Alf(P_j)$.
 For every pair $(P'_m,P'_n)$ so generated,
 we construct
 $P_1 | \dots | P'_m | \dots | P'_n | \dots | P_n$.
-When $n=2$, we simply compute
+When $n=2$, we simply compute as follows:
+\begin{eqnarray*}
+   \alpha_{12} &\defeq& \Alf(P_1)\cap\overline{\Alf(P_2)}
+\\ &=& \setof{\ell_1,\dots,\ell_k}
+\\ P_1 | P_2
+   &\mapsto&
+   \{ \circ\ell_i(P_1) | \circ\bar\ell_i(P_2), i \in 1\dots k \}
+\end{eqnarray*}
 \begin{code}
 parBodiesAfterComTaus :: Proc -> Proc -> [Proc]
 parBodiesAfterComTaus ccs1 ccs2
-  = crossmap comp ccs1s' ccs2s' -- wrong! sum, not product
+  = concat $ map (afterThisCom ccs1 ccs2) ell1s
   where
     alf1 = alf ccs1
     alf2 = alf ccs2
     alf12 = alf1 `S.intersection` (S.map pfxbar alf2)
     ell1s = S.toList alf12
-    ell2s = map pfxbar ell1s
-    ccs1s' = concat $ map ($ ccs1) (map afterEvt ell1s)
-    ccs2s' = concat $ map ($ ccs2) (map afterEvt ell2s)
+    afterThisCom ccs1 ccs2 ell
+      let
+        ccs1s = afterEvt ell ccs1
+        ccs2s = afterEvt (pfxbar ell) ccs2
+      in [] -- need to re-think all of this.....
 \end{code}
 
 The above requires us to also provide a function ``after-label''
