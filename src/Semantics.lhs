@@ -78,14 +78,13 @@ In the last line we assume (promptly) guarded recursion.
 \begin{code}
 -- isCCS
 afterTau :: CCS -> [CCS]
-afterTau (Pfx T ccs)         =  [ccs]
-afterTau (Pfx (T' _) ccs)    =  [] -- not considered a tau here !
+afterTau (CCSpfx T ccs)         =  [ccs]
+afterTau (CCSpfx (T' _) ccs)    =  [] -- not considered a tau here !
 afterTau (Sum ccs1 ccs2)     =  afterTau ccs1 ++ afterTau ccs2
-afterTau (Par nms ccs1 ccs2)
- | S.null nms                =  parBodiesAfterTaus ccs1 ccs2
+afterTau (Comp ccs1 ccs2)    =  parBodiesAfterTaus ccs1 ccs2
 afterTau (Rstr es ccs)       =  afterTau ccs
-afterTau (Ren s2s ccs)       =  map (Ren s2s) $ afterTau ccs
-afterTau (Rec s ccs)         =  []
+afterTau (CCSren s2s ccs)       =  map (CCSren s2s) $ afterTau ccs
+afterTau (CCSmu s ccs)         =  []
 afterTau _                   =  [] -- the rest, incl CSP stuff
 \end{code}
 
@@ -158,15 +157,14 @@ that returns a list of processes that can result from a specified label event.
 \begin{code}
 -- isCCS
 afterEvt :: CCS_Pfx -> CCS -> [CCS]
-afterEvt pfx (Pfx pfx' ccs)
+afterEvt pfx (CCSpfx pfx' ccs)
   | pfx == pfx'                 =  [ccs]
 afterEvt pfx (Sum p1 p2)        =  concat $ map (afterEvt pfx) [p1,p2]
-afterEvt pfx (Par nms ccs1 ccs2)
- | S.null nms  =  parBodiesAfterEvts ccs1 ccs2
+afterEvt pfx (Comp ccs1 ccs2)   =  parBodiesAfterEvts ccs1 ccs2
 afterEvt pfx@(Lbl evt) (Rstr es ccs)
   | not (evt `elem` es)        =  afterEvt pfx ccs
-afterEvt pfx (Ren s2s ccs)     =  afterEvt pfx $ doRename (endo s2s) ccs
-afterEvt pfx (Rec s ccs)       =  afterEvt pfx ccs
+afterEvt pfx (CCSren s2s ccs)     =  afterEvt pfx $ doRename (endo s2s) ccs
+afterEvt pfx (CCSmu s ccs)       =  afterEvt pfx ccs
 afterEvt pfx _                 =  [] -- the rest, incl CSP stuff
 \end{code}
 
@@ -467,5 +465,5 @@ From Schneider
   \infer{P \trans\tau P'}{f(P) \trans\tau f(P')} \; Ren_2
   \and
   \infer{N = P \\ P \trans\mu P'}
-        {N \trans\mu P'} \; Rec
+        {N \trans\mu P'} \; CCSmu
 \end{mathpar}
