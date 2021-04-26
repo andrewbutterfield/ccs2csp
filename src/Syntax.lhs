@@ -76,8 +76,8 @@ data CCS_Pfx
   = T           -- CSS     tau
   | Lbl IxLab   -- CCS     a or a-bar
   | T' String   -- CCStau  t[a|a-bar]
-  | Evt String  -- CSP     Event
   deriving (Eq,Ord,Read)
+
 
 isLbl :: CCS_Pfx -> Bool
 isLbl (Lbl _)  =  True
@@ -88,7 +88,6 @@ instance Show CCS_Pfx where
   show (Lbl (Std s,i))  =  s ++ show i
   show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
   show (T' n)           =  show T ++ "["++n++"|"++n++"-bar]"
-  show (Evt str)        =  str
 
 pfxbar :: CCS_Pfx -> CCS_Pfx
 pfxbar (Lbl e)  =  Lbl $ ixlbar e
@@ -114,6 +113,18 @@ For CCS we have the syntax:
              \mid X
              \mid \mu X \bullet P
 \end{eqnarray*}
+\begin{code}
+data CCS
+  = Zero
+  | CCSpfx CCS_Pfx CCS
+  | Sum CCS CCS
+  | Comp CCS CCS
+  | Rstr (Set IxLab) CCS
+  | CCSren RenPairs CCS
+  | CCSvar String
+  | CCSmu String CCS
+  deriving (Eq,Ord,Read)
+\end{code}
 For CSP we have the syntax:
 \begin{eqnarray*}
   P,Q &::=&  Stop
@@ -128,72 +139,25 @@ For CSP we have the syntax:
              \mid X
              \mid \mu X \bullet P
 \end{eqnarray*}
-We can re-use the same constructs for:
-CCS $0$ and CSP $Stop$;
-CCS $|$ and CSP $\parallel$;
-and
-CCS $+$ and CSP $\sqcap$.
-We need an extra choice for:
-CSP $Skip$;
-CSP $;$;
-and
-CSP $\Box$.
 \begin{code}
-data CCS                       -- which? CSS? CSP? both?
-  = Zero                        -- both  0, STOP
-  | Skip                        -- CSP SKIP
-  | Pfx CCS_Pfx CCS             -- both, Evt for CSP, others for CCS
-  | Seq CCS CCS               -- CSP ;
-  | Sum CCS CCS               -- both + |~|
-  | Ext CCS CCS               -- CSP []
-  | Par (Set String) CCS CCS  -- both  | |..|
-  | Rstr (Set IxLab) CCS       -- both |' \
-  | Ren RenPairs CCS           -- both  _[f]  f(_)
-  | PVar String                 -- both
-  | Rec String CCS             -- both
+data CSP
+  = Stop
+  | Skip
+  | CSPpfx String CSP
+  | Seq CSP CSP
+  | IntC CSP CSP
+  | ExtC CSP CSP
+  | Par (Set String) CSP CSP
+  | Hide (Set String) CSP
+  | CSPren RenPairs CSP
+  | CSPvar String
+  | CSPmu String CSP
   deriving (Eq,Ord,Read)
+\end{code}
 
+\begin{code}
 comp :: CCS -> CCS -> CCS
-comp = Par S.empty
-
-isCCS :: CCS -> Bool
-isCCS Skip             =  False
-isCCS (Seq _ _)        =  False
-isCCS (Ext _ _)        =  False
-isCCS (Pfx _ prc)      =  isCCS prc
-isCCS (Sum p1 p2)      =  isCCS p1 && isCCS p2
-isCCS (Par nms p1 p2)  =  S.null nms && isCCS p1 && isCCS p2
-isCCS (Rstr _ prc)     =  isCCS prc
-isCCS (Ren _ prc)      =  isCCS prc
-isCCS (Rec _ prc)      =  isCCS prc
-isCCS _                =  True  -- Zero, PVar
-
-isCSP :: CCS -> Bool
-isCSP (Pfx pfx csp)  =  isCSPPfx pfx && isCSP csp
-isCSP (Seq p1 p2)    =  isCSP p1 && isCSP p2
-isCSP (Sum p1 p2)    =  isCSP p1 && isCSP p2
-isCSP (Ext p1 p2)    =  isCSP p1 && isCSP p2
-isCSP (Par _ p1 p2)  =  isCSP p1 && isCSP p2
-isCSP (Rstr _ csp)   =  isCSP csp
-isCSP (Ren _ csp)    =  isCSP csp
-isCSP (Rec _ csp)    =  isCSP csp
-isCSP _              =  True  -- Zero, Skip, PVar
-
-isCSPPfx (Lbl (_,None))  =  True
-isCSPPfx _               =  False
-
--- f s2s Zero
--- f s2s Skip
--- f s2s (Pfx pfx prc)
--- f s2s (Seq p1 p2)
--- f s2s (Sum p1 p2)
--- f s2s (Ext p1 p2)
--- f s2s (Par nms p1 p2)
--- f s2s (Rstr es prc)
--- f s2s (Ren s2s prc)
--- f s2s (PVar s)
--- f s2s (Rec s prc)
--- f s2s prc
+comp = Comp
 \end{code}
 
 \begin{code}
@@ -201,7 +165,6 @@ renamePfx :: RenPairs -> CCS_Pfx -> CCS_Pfx
 renamePfx _   T          =  T
 renamePfx s2s (T' s)     =  T'  $ renameStr s s2s
 renamePfx s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
-renamePfx s2s (Evt e)    =  Evt $ renameStr e s2s
 
 renameIxL :: RenPairs -> IxLab -> IxLab
 renameIxL s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
@@ -216,16 +179,13 @@ renameStr s ((f,t):s2s)
 \begin{code}
 alf :: CCS -> Set CCS_Pfx
 alf Zero            =  S.empty
-alf Skip            =  S.empty
-alf (Pfx pfx prc)   =  S.singleton pfx `S.union` alf prc
-alf (Seq p1 p2)     =  alf p1 `S.union` alf p2
+alf (CCSpfx pfx prc)   =  S.singleton pfx `S.union` alf prc
 alf (Sum p1 p2)     =  alf p1 `S.union` alf p2
-alf (Ext p1 p2)     =  alf p1 `S.union` alf p2
-alf (Par nms p1 p2) =  alf p1 `S.union` alf p2
+alf (Comp p1 p2) =  alf p1 `S.union` alf p2
 alf (Rstr es prc)   =  alf prc S.\\ S.map Lbl es
-alf (Ren s2s prc)   =  S.map (renamePfx s2s) $ alf prc
-alf (PVar s)        =  S.empty
-alf (Rec s prc)     =  alf prc
+alf (CCSren s2s prc)   =  S.map (renamePfx s2s) $ alf prc
+alf (CCSvar s)        =  S.empty
+alf (CCSmu s prc)     =  alf prc
 
 alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
@@ -233,7 +193,7 @@ alfPfx _          =  S.empty
 
 \begin{code}
 -- Comm+Conc, p44
--- tightest: {Ren,Rstr}, Pfx, Seq, Par, Ext, Sum :loosest
+-- tightest: {CCSren,Rstr}, CCSpfx, Seq, Comp, Ext, Sum :loosest
 pSum  =    2;  pSum'  = pSum+1
 pExt  =    4;  pExt'  = pSum+1
 pPar  =    6;  pPar'  = pPar+1
@@ -244,27 +204,20 @@ pRstr = pRen;  pRstr' = pRstr+1
 \end{code}
 
 
+
 \begin{code}
 instance Show CCS where
 
   showsPrec p Zero  = showString "0"
 
-  showsPrec p Skip  = showString "SKIP"
-
-  showsPrec p (Pfx pfx Zero) = showString $ show pfx
-  showsPrec p (Pfx pfx prc)
+  showsPrec p (CCSpfx pfx Zero) = showString $ show pfx
+  showsPrec p (CCSpfx pfx prc)
     = showParen (p > pPfx) $
         showString (show pfx) .
         showString "." .
         showsPrec pPfx prc
 
   showsPrec p (Sum p1 p2) = showsInfix p pSum pSum' showSum [p1,p2]
-
-  showsPrec p (Ext p1 p2) = showsInfix p pExt pExt' showExt [p1,p2]
-
-  showsPrec p (Par nms p1 p2) = showsInfix p pPar pPar' (showPar nms) [p1,p2]
-
-  showsPrec p (Seq p1 p2) = showsInfix p pSeq pSeq' showSeq [p1,p2]
 
   showsPrec p (Rstr es prc)
    | S.null es  =  showsPrec p prc
@@ -273,16 +226,16 @@ instance Show CCS where
                     showString "|'" .
                     showEvents (S.toList es)
 
-  showsPrec p (Ren s2s prc)
+  showsPrec p (CCSren s2s prc)
     = showParen (p > pRen) $
         showsPrec pRen' prc .
         showString "[" .
         showRenFun s2s .
         showString "]"
 
-  showsPrec p (PVar ell) = showString ell
+  showsPrec p (CCSvar ell) = showString ell
 
-  showsPrec p (Rec ell prc)
+  showsPrec p (CCSmu ell prc)
     = showParen True $
         showString "mu " .
         showString ell .
@@ -371,14 +324,12 @@ endo ((a1,a2):as) a
 Summaries:
 \begin{code}
 prefixesOf :: CCS -> Set CCS_Pfx
-prefixesOf (Pfx pfx prc)   =  S.singleton pfx `S.union` prefixesOf prc
-prefixesOf (Seq p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (CCSpfx pfx prc)   =  S.singleton pfx `S.union` prefixesOf prc
 prefixesOf (Sum p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Par _ p1 p2)   =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Ext p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Comp p1 p2)   =  prefixesOf p1 `S.union` prefixesOf p2
 prefixesOf (Rstr ss prc)   =  prefixesOf prc
-prefixesOf (Ren s2s prc)   =  prefixesOf $ doRename (endo s2s) prc
-prefixesOf (Rec s prc)     =  prefixesOf prc
+prefixesOf (CCSren s2s prc)   =  prefixesOf $ doRename (endo s2s) prc
+prefixesOf (CCSmu s prc)     =  prefixesOf prc
 prefixesOf _               =  S.empty
 \end{code}
 
@@ -386,22 +337,18 @@ prefixesOf _               =  S.empty
 Actions:
 \begin{code}
 doRename :: (String -> String) -> CCS -> CCS
-doRename s2s (Pfx pfx prc)   =  Pfx (renPfx s2s pfx) $ doRename s2s prc
+doRename s2s (CCSpfx pfx prc)   =  CCSpfx (renPfx s2s pfx) $ doRename s2s prc
 doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Seq p1 p2)      =  Seq (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Ext p1 p2)      =  Ext (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Par nms p1 p2)  =  Par (S.map s2s nms)
-                                     (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Comp p1 p2)  =  Comp (doRename s2s p1) (doRename s2s p2)
 doRename s2s (Rstr es prc)   =  Rstr (S.map (renIxLab s2s) es) $ doRename s2s prc
-doRename s2s (Ren s2s' prc)  =  doRename s2s (doRename (endo s2s') prc)
-doRename s2s (Rec s prc)     =  Rec s $ doRename s2s prc
+doRename s2s (CCSren s2s' prc)  =  doRename s2s (doRename (endo s2s') prc)
+doRename s2s (CCSmu s prc)     =  CCSmu s $ doRename s2s prc
 doRename _   prc             = prc
 
 renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
 renPfx _ T            =  T
 renPfx s2s (T' s)     =  T' $ s2s s
 renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell
-renPfx s2s (Evt e)    =  Evt $ s2s e
 
 renIxLab :: (String -> String) -> IxLab -> IxLab
 renIxLab s2s (ell,i)  =  (renName s2s ell,i)
