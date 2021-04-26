@@ -143,10 +143,10 @@ parBodiesAfterComTaus ccs1 ccs2
     alf12 = alf1 `S.intersection` (S.map pfxbar alf2)
     ell1s = S.toList alf12
     afterThisCom ccs1 ccs2 ell
-      let
-        ccs1s = afterEvt ell ccs1
-        ccs2s = afterEvt (pfxbar ell) ccs2
-      in [] -- need to re-think all of this.....
+      = let
+          ccs1s = afterEvt ell ccs1
+          ccs2s = afterEvt (pfxbar ell) ccs2
+        in [] -- need to re-think all of this.....
 \end{code}
 
 The above requires us to also provide a function ``after-label''
