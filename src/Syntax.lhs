@@ -15,6 +15,9 @@ import Data.List
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
+We have a meeting of two worlds here,
+CSP and CCS.
+
 We use CCS notion of ``label'' as basic.
 A CSP ``event'' is represented a \texttt{Std} label.
 \begin{code}
@@ -69,25 +72,25 @@ ixlbar (ell,i) = (bar ell,i)
 \end{code}
 
 \begin{code}
-data Prefix
+data CCS_Pfx
   = T           -- CSS     tau
   | Lbl IxLab   -- CCS     a or a-bar
   | T' String   -- CCStau  t[a|a-bar]
   | Evt String  -- CSP     Event
   deriving (Eq,Ord,Read)
 
-isLbl :: Prefix -> Bool
+isLbl :: CCS_Pfx -> Bool
 isLbl (Lbl _)  =  True
 isLbl _        =  False
 
-instance Show Prefix where
+instance Show CCS_Pfx where
   show T                =  "t"
   show (Lbl (Std s,i))  =  s ++ show i
   show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
   show (T' n)           =  show T ++ "["++n++"|"++n++"-bar]"
   show (Evt str)        =  str
 
-pfxbar :: Prefix -> Prefix
+pfxbar :: CCS_Pfx -> CCS_Pfx
 pfxbar (Lbl e)  =  Lbl $ ixlbar e
 pfxbar pfx      =  pfx
 \end{code}
@@ -136,24 +139,24 @@ CSP $;$;
 and
 CSP $\Box$.
 \begin{code}
-data Proc                       -- which? CSS? CSP? both?
+data CCS                       -- which? CSS? CSP? both?
   = Zero                        -- both  0, STOP
   | Skip                        -- CSP SKIP
-  | Pfx Prefix Proc             -- both, Evt for CSP, others for CCS
-  | Seq Proc Proc               -- CSP ;
-  | Sum Proc Proc               -- both + |~|
-  | Ext Proc Proc               -- CSP []
-  | Par (Set String) Proc Proc  -- both  | |..|
-  | Rstr (Set IxLab) Proc       -- both |' \
-  | Ren RenPairs Proc           -- both  _[f]  f(_)
+  | Pfx CCS_Pfx CCS             -- both, Evt for CSP, others for CCS
+  | Seq CCS CCS               -- CSP ;
+  | Sum CCS CCS               -- both + |~|
+  | Ext CCS CCS               -- CSP []
+  | Par (Set String) CCS CCS  -- both  | |..|
+  | Rstr (Set IxLab) CCS       -- both |' \
+  | Ren RenPairs CCS           -- both  _[f]  f(_)
   | PVar String                 -- both
-  | Rec String Proc             -- both
+  | Rec String CCS             -- both
   deriving (Eq,Ord,Read)
 
-comp :: Proc -> Proc -> Proc
+comp :: CCS -> CCS -> CCS
 comp = Par S.empty
 
-isCCS :: Proc -> Bool
+isCCS :: CCS -> Bool
 isCCS Skip             =  False
 isCCS (Seq _ _)        =  False
 isCCS (Ext _ _)        =  False
@@ -165,7 +168,7 @@ isCCS (Ren _ prc)      =  isCCS prc
 isCCS (Rec _ prc)      =  isCCS prc
 isCCS _                =  True  -- Zero, PVar
 
-isCSP :: Proc -> Bool
+isCSP :: CCS -> Bool
 isCSP (Pfx pfx csp)  =  isCSPPfx pfx && isCSP csp
 isCSP (Seq p1 p2)    =  isCSP p1 && isCSP p2
 isCSP (Sum p1 p2)    =  isCSP p1 && isCSP p2
@@ -194,7 +197,7 @@ isCSPPfx _               =  False
 \end{code}
 
 \begin{code}
-renamePfx :: RenPairs -> Prefix -> Prefix
+renamePfx :: RenPairs -> CCS_Pfx -> CCS_Pfx
 renamePfx _   T          =  T
 renamePfx s2s (T' s)     =  T'  $ renameStr s s2s
 renamePfx s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
@@ -211,7 +214,7 @@ renameStr s ((f,t):s2s)
 \end{code}
 
 \begin{code}
-alf :: Proc -> Set Prefix
+alf :: CCS -> Set CCS_Pfx
 alf Zero            =  S.empty
 alf Skip            =  S.empty
 alf (Pfx pfx prc)   =  S.singleton pfx `S.union` alf prc
@@ -242,7 +245,7 @@ pRstr = pRen;  pRstr' = pRstr+1
 
 
 \begin{code}
-instance Show Proc where
+instance Show CCS where
 
   showsPrec p Zero  = showString "0"
 
@@ -343,18 +346,18 @@ showEE (e1,e2) = showString e1 .
 
 Smart Builders:
 \begin{code}
-csum :: [Proc] -> Proc
+csum :: [CCS] -> CCS
 csum [] = Zero
 csum [prc] = prc
 csum (prc:prcs) = Sum prc $ csum prcs
 
-cpar :: [Proc] -> Proc
+cpar :: [CCS] -> CCS
 cpar [] = Zero
 cpar [prc] = prc
 cpar (prc:prcs) = comp prc $ cpar prcs
 
 
-rstr :: [IxLab] -> Proc -> Proc
+rstr :: [IxLab] -> CCS -> CCS
 rstr [] prc = prc
 rstr es prc = Rstr (S.fromList es) prc
 
@@ -367,7 +370,7 @@ endo ((a1,a2):as) a
 
 Summaries:
 \begin{code}
-prefixesOf :: Proc -> Set Prefix
+prefixesOf :: CCS -> Set CCS_Pfx
 prefixesOf (Pfx pfx prc)   =  S.singleton pfx `S.union` prefixesOf prc
 prefixesOf (Seq p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
 prefixesOf (Sum p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
@@ -382,7 +385,7 @@ prefixesOf _               =  S.empty
 
 Actions:
 \begin{code}
-doRename :: (String -> String) -> Proc -> Proc
+doRename :: (String -> String) -> CCS -> CCS
 doRename s2s (Pfx pfx prc)   =  Pfx (renPfx s2s pfx) $ doRename s2s prc
 doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
 doRename s2s (Seq p1 p2)      =  Seq (doRename s2s p1) (doRename s2s p2)
@@ -394,7 +397,7 @@ doRename s2s (Ren s2s' prc)  =  doRename s2s (doRename (endo s2s') prc)
 doRename s2s (Rec s prc)     =  Rec s $ doRename s2s prc
 doRename _   prc             = prc
 
-renPfx :: (String -> String) -> Prefix -> Prefix
+renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
 renPfx _ T            =  T
 renPfx s2s (T' s)     =  T' $ s2s s
 renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell

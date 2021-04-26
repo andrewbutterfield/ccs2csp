@@ -58,7 +58,7 @@ For now,
 we want a function ("after-tau")
 that returns the set of processes that can result from a tau event.
 \begin{eqnarray*}
-   \circ\tau &:& Proc \fun Proc^*
+   \circ\tau &:& CCS \fun CCS^*
 \\ \circ\tau(P) &\defeq& \{ P' \mid P \trans\tau P' \}
 \end{eqnarray*}
 
@@ -77,7 +77,7 @@ We reify this as follows:
 In the last line we assume (promptly) guarded recursion.
 \begin{code}
 -- isCCS
-afterTau :: Proc -> [Proc]
+afterTau :: CCS -> [CCS]
 afterTau (Pfx T ccs)         =  [ccs]
 afterTau (Pfx (T' _) ccs)    =  [] -- not considered a tau here !
 afterTau (Sum ccs1 ccs2)     =  afterTau ccs1 ++ afterTau ccs2
@@ -99,7 +99,7 @@ which should not count here.
    \circ\tau^2(P_1,P_2) &\defeq& \dots
 \end{eqnarray*}
 \begin{code}
-parBodiesAfterTaus :: Proc -> Proc -> [Proc]
+parBodiesAfterTaus :: CCS -> CCS -> [CCS]
 parBodiesAfterTaus ccs1 ccs2
   =  parBodiesAfterOwnTaus ccs1 ccs2 -- ++ parBodiesAfterComTaus ccs1 ccs2
 \end{code}
@@ -109,7 +109,7 @@ for each $i \in 1\dots n$, we compute $\circ\tau(P_i)$.
 For each $P'_j$ in  $\circ\tau(P_i)$ we construct
 $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
-parBodiesAfterOwnTaus :: Proc -> Proc -> [Proc]
+parBodiesAfterOwnTaus :: CCS -> CCS -> [CCS]
 parBodiesAfterOwnTaus ccs1 ccs2
   = map (comp ccs1) ccs2s' ++ map (flip comp ccs2) ccs1s'
   where
@@ -134,7 +134,7 @@ When $n=2$, we simply compute as follows:
    \{ \circ\ell_i(P_1) | \circ\bar\ell_i(P_2), i \in 1\dots k \}
 \end{eqnarray*}
 \begin{code}
-parBodiesAfterComTaus :: Proc -> Proc -> [Proc]
+parBodiesAfterComTaus :: CCS -> CCS -> [CCS]
 parBodiesAfterComTaus ccs1 ccs2
   = concat $ map (afterThisCom ccs1 ccs2) ell1s
   where
@@ -152,12 +152,12 @@ parBodiesAfterComTaus ccs1 ccs2
 The above requires us to also provide a function ``after-label''
 that returns a list of processes that can result from a specified label event.
 \begin{eqnarray*}
-   \circ\ell &:& Proc \fun Proc^*
+   \circ\ell &:& CCS \fun CCS^*
 \\ \circ\ell(P) &\defeq& \{ P' \mid P \trans\ell P' \}
 \end{eqnarray*}
 \begin{code}
 -- isCCS
-afterEvt :: Prefix -> Proc -> [Proc]
+afterEvt :: CCS_Pfx -> CCS -> [CCS]
 afterEvt pfx (Pfx pfx' ccs)
   | pfx == pfx'                 =  [ccs]
 afterEvt pfx (Sum p1 p2)        =  concat $ map (afterEvt pfx) [p1,p2]
@@ -176,7 +176,7 @@ we compute $\circ\ell(P_i)$.
 For each $P'_j$ in  $\circ\ell(P_i)$ we construct
 $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
-parBodiesAfterEvts :: Proc -> Proc -> [Proc]
+parBodiesAfterEvts :: CCS -> CCS -> [CCS]
 parBodiesAfterEvts ccs1 ccs2
   = map (comp ccs1) ccs2s' ++ map (flip comp ccs2) ccs1s'
   where
@@ -194,7 +194,7 @@ Law $E_1 = E_2$ means that, for all $\alpha$,
 that $E_1 \wktrans\alpha E'$ iff $E_2 \wktrans\alpha E'$.
 
 \begin{code}
-type LawFun m = Proc -> m Proc
+type LawFun m = CCS -> m CCS
 \end{code}
 
 
@@ -245,7 +245,7 @@ Corrollary 3 ([CC],p63)
 
 \subsubsection{Recursion}
 
-$X$ is sequential in $E$ if it occurs only inside Prefix or Sum.
+$X$ is sequential in $E$ if it occurs only inside CCS_Pfx or Sum.
 
 $X$ is guarded in $E$ if each occurrence inside some $\ell.F$ within $E$.
 

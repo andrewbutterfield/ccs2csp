@@ -259,10 +259,10 @@ we see the following, simplified here a bit:
 Note that the recursion is under the iterated parallel,
 not enclosing it.
 \begin{code}
-ever :: IxLab -> Proc
+ever :: IxLab -> CCS
 ever evt = Rec "X" $ Pfx (Lbl $ ixlbar evt) $ PVar "X"
 infixl 7 \\
-(\\) :: Proc -> (Set IxLab) -> Proc
+(\\) :: CCS -> (Set IxLab) -> CCS
 ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
 \end{code}
 

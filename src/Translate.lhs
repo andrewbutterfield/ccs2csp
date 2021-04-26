@@ -36,7 +36,7 @@ This is called $c2ix$ in [GEN]
 \begin{code}
 c2ix = indexNames
 
-indexNames :: Proc -> Proc
+indexNames :: CCS -> CCS
 indexNames = fst . iFrom 1
 
 
@@ -56,7 +56,7 @@ iFrom i (Rec nm ccs) = (Rec nm ccs',i')
   where (ccs',i') = iFrom i ccs
 iFrom i ccs = (ccs,i)
 
-iPfx :: Int -> Prefix -> Prefix
+iPfx :: Int -> CCS_Pfx -> CCS_Pfx
 iPfx i T = T
 iPfx i (Lbl e) = Lbl (iLbl i e)
 iPfx _ pfx = pfx
@@ -64,11 +64,11 @@ iPfx _ pfx = pfx
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
 
-cameFrom :: (Set IxLab) -> Prefix -> Bool
+cameFrom :: (Set IxLab) -> CCS_Pfx -> Bool
 cameFrom es (Lbl e)  =  (root . fst) e `S.member` S.map (root . fst) es
 cameFrom _  _        =  False
 
-getlbl :: Prefix -> IxLab
+getlbl :: CCS_Pfx -> IxLab
 getlbl (Lbl lbl)  =  lbl
 \end{code}
 
@@ -76,7 +76,7 @@ Given a CCS term, return a mapping from events
 to the set of indices associated with each event.
 \begin{code}
 type IxMap = Map Label (Set Index)
-indexMap :: Proc -> IxMap
+indexMap :: CCS -> IxMap
 indexMap = iMap M.empty
 
 iMap imap (Pfx (Lbl (nm,i)) ccs)  =  iMap imap' ccs
@@ -178,18 +178,18 @@ in order for $g^*$ to work properly.
    \forall a_i \in B \bullet \{a_k \mid a_k \in \Alf P\} \subseteq B
 \end{eqnarray*}
 \begin{code}
-wfRes :: Proc -> Bool
+wfRes :: CCS -> Bool
 wfRes _ = error "wfRes NYI"
 \end{code}
 
 Type signature for process $g^*$:
 \begin{eqnarray*}
-   g^* &:& \Set(Act \times \Nat)\times Proc
+   g^* &:& \Set(Act \times \Nat)\times CCS
            \fun
-           Proc\\ pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
+           CCS\\ pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
 \end{eqnarray*}
 \begin{code}
-gsp :: Set IxLab -> Proc -> Proc
+gsp :: Set IxLab -> CCS -> CCS
 \end{code}
 
 Pre-condition for process $g^*$:
@@ -240,11 +240,11 @@ mkpfx p lbl = Pfx (Lbl lbl) p
 
 At the top-level, we start with a empty indexed label context:
 \begin{eqnarray*}
-   g^* &:& Proc \fun Proc
+   g^* &:& CCS \fun CCS
 \\ g^*(P) &\defeq& g^*(\emptyset,P)
 \end{eqnarray*}
 \begin{code}
-gsp0 :: Proc -> Proc
+gsp0 :: CCS -> CCS
 gsp0 = gsp S.empty
 \end{code}
 
@@ -278,7 +278,7 @@ Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
 
 We partially implement this as a prefix transform $tlp$:
 \begin{code}
-tlp :: IxLab -> Prefix
+tlp :: IxLab -> CCS_Pfx
 tlp ix        =  Evt $ tll ix
 tll (nm,ix)   =  tln nm++tli ix
 tln (Std nm)  =  nm
@@ -315,7 +315,7 @@ We implement $conm$ within $tl$ here, by using $tlp$ above,
 and dealing with the parallel sync and restriction sets explicitly below.
 This covers all the places where labels occurs in CCS.
 \begin{code}
-tl :: Proc -> Proc
+tl :: CCS -> CCS
 tl Zero                   =  Zero
 tl (Pfx (Lbl il) ccs)     =  Pfx (tlp il) $ tl ccs
 tl (Pfx pfx@(Evt _) ccs)  =  Pfx pfx $ tl ccs
@@ -347,7 +347,7 @@ For $P$ a CCSTau process:
     t2csp(S,P) &\defeq& tl(conm(c4star(S,P)))
 \end{eqnarray*}
 \begin{code}
-t2csp :: Set IxLab -> Proc -> Proc
+t2csp :: Set IxLab -> CCS -> CCS
 t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 \end{code}
 
@@ -393,13 +393,13 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 % \end{eqnarray*}
 %
 % \begin{code}
-% ccs2star :: Proc -> Proc
+% ccs2star :: CCS -> CCS
 % ccs2star ccs
 %  = c2star imap iccs
 %  where  iccs = indexNames ccs
 %         imap = indexMap iccs
 %
-%         c2star :: IxMap -> Proc -> Proc
+%         c2star :: IxMap -> CCS -> CCS
 %
 %         c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
 %           = sumPrefixes imap alfa i $ c2star imap ccs
@@ -425,7 +425,7 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 %    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
 % \end{eqnarray*}
 % \begin{code}
-% sumPrefixes :: IxMap -> Label -> Int -> Proc -> Proc
+% sumPrefixes :: IxMap -> Label -> Int -> CCS -> CCS
 % sumPrefixes imap alfa i ccs
 %   = case M.lookup (bar alfa) imap of
 %       Nothing  ->  Pfx (Lbl (alfa,One i)) ccs
@@ -450,17 +450,17 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 %    \{\alpha_{ij} \mid \alpha_i \in P_m, \bar\alpha_j \in P_n, m \neq n\}
 % \end{eqnarray*}
 % \begin{code}
-% syncPre :: [[Prefix]] -> [IxLab]
+% syncPre :: [[CCS_Pfx]] -> [IxLab]
 % syncPre = concat . findSync syncPre1
 %
 % --
-% syncPre1 :: [Prefix] -> [Prefix] -> [[IxLab]]
+% syncPre1 :: [CCS_Pfx] -> [CCS_Pfx] -> [[IxLab]]
 % syncPre1 ps1 ps2 = map (f ps1) ps2
 %  where f ps1 p2 = concat $ map (syncPre2 p2) ps1
 % \end{code}
 %
 % \begin{code}
-% syncPre2 :: Prefix -> Prefix -> [IxLab]
+% syncPre2 :: CCS_Pfx -> CCS_Pfx -> [IxLab]
 % syncPre2 (Lbl (Std m,One i)) (Lbl (Bar n,One j)) | m == n  =  syncE m i j
 % syncPre2 (Lbl (Bar m,One i)) (Lbl (Std n,One j)) | m == n  =  syncE m i j
 % syncPre2 _                   _                             =  []
