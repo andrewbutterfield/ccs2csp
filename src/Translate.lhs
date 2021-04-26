@@ -40,19 +40,19 @@ indexNames :: CCS -> CCS
 indexNames = fst . iFrom 1
 
 
-iFrom i (Pfx pfx ccs) = (Pfx (iPfx i pfx) ccs',i')
+iFrom i (CCSpfx pfx ccs) = (CCSpfx (iPfx i pfx) ccs',i')
   where (ccs',i') = iFrom (i+1) ccs
 iFrom i (Sum p1 p2) = (Sum p1' p2',i')
   where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
-iFrom i (Par nms p1 p2) = (Par nms p1' p2',i')
+iFrom i (Comp p1 p2) = (Comp p1' p2',i')
   where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
 iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
     (ccs',i') = iFrom i ccs
     es' = S.map getlbl $ S.filter (cameFrom es) $ alf ccs'
-iFrom i (Ren pfn ccs) = (Ren pfn ccs',i')
+iFrom i (CCSren pfn ccs) = (CCSren pfn ccs',i')
   where (ccs',i') = iFrom i ccs
-iFrom i (Rec nm ccs) = (Rec nm ccs',i')
+iFrom i (CCSmu nm ccs) = (CCSmu nm ccs',i')
   where (ccs',i') = iFrom i ccs
 iFrom i ccs = (ccs,i)
 
@@ -79,14 +79,14 @@ type IxMap = Map Label (Set Index)
 indexMap :: CCS -> IxMap
 indexMap = iMap M.empty
 
-iMap imap (Pfx (Lbl (nm,i)) ccs)  =  iMap imap' ccs
+iMap imap (CCSpfx (Lbl (nm,i)) ccs)  =  iMap imap' ccs
                      where imap'  =  insMapping nm i imap
-iMap imap (Pfx  _ ccs)            =  iMap imap ccs
+iMap imap (CCSpfx  _ ccs)            =  iMap imap ccs
 iMap imap (Sum p1 p2)             =  iSeqMap imap [p1,p2]
-iMap imap (Par _ p1 p2)           =  iSeqMap imap [p1,p2]
+iMap imap (Comp p1 p2)           =  iSeqMap imap [p1,p2]
 iMap imap (Rstr es ccs)           =  iMap imap ccs
-iMap imap (Ren _ ccs)             =  iMap imap ccs
-iMap imap (Rec nm ccs)            =  iMap imap ccs
+iMap imap (CCSren _ ccs)             =  iMap imap ccs
+iMap imap (CCSmu nm ccs)            =  iMap imap ccs
 iMap imap ccs                     =  imap
 
 iSeqMap imap []          =  imap
@@ -219,23 +219,22 @@ Definition of process $g^*$:
 
 \begin{code}
 gsp _    Zero                   =  Zero
-gsp _    v@(PVar _)             =  v
+gsp _    v@(CCSvar _)             =  v
 gsp iCtxt (Sum ccs1 ccs2)       =  csum $ map (gsp iCtxt) [ccs1,ccs2]
-gsp iCtxt (Rec x ccs)           =  Rec x $ gsp iCtxt ccs
+gsp iCtxt (CCSmu x ccs)           =  CCSmu x $ gsp iCtxt ccs
 gsp iCtxt (Rstr lbls ccs)       =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
-gsp iCtxt (Ren f ccs)           =  Ren f $ gsp iCtxt ccs
-gsp iCtxt (Par nms ccs1 ccs2)
- | S.null nms                   =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
+gsp iCtxt (CCSren f ccs)           =  CCSren f $ gsp iCtxt ccs
+gsp iCtxt (Comp ccs1 ccs2)  =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
                                         $ map getCCSLbls [ccs1,ccs2]
-gsp iCtxt (Pfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
+gsp iCtxt (CCSpfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
-gsp iCtxt (Pfx pfx ccs)         =  Pfx pfx $ gsp iCtxt ccs
+gsp iCtxt (CCSpfx pfx ccs)         =  CCSpfx pfx $ gsp iCtxt ccs
 gsp _ csp  =  error ("Cannot gsp CSP syntax:("++show csp++")")
 
 -- helpers
 getCCSLbls = S.map getlbl . S.filter isLbl . alf
 gpar iCtxt p ilbls = gsp (S.unions $ iCtxt:ilbls) p
-mkpfx p lbl = Pfx (Lbl lbl) p
+mkpfx p lbl = CCSpfx (Lbl lbl) p
 \end{code}
 
 At the top-level, we start with a empty indexed label context:
@@ -278,8 +277,8 @@ Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
 
 We partially implement this as a prefix transform $tlp$:
 \begin{code}
-tlp :: IxLab -> CCS_Pfx
-tlp ix        =  Evt $ tll ix
+tlp :: IxLab -> CSP_Pfx
+tlp ix        =  tll ix
 tll (nm,ix)   =  tln nm++tli ix
 tln (Std nm)  =  nm
 tln (Bar nm)  =  nm
@@ -315,30 +314,26 @@ We implement $conm$ within $tl$ here, by using $tlp$ above,
 and dealing with the parallel sync and restriction sets explicitly below.
 This covers all the places where labels occurs in CCS.
 \begin{code}
-tl :: CCS -> CCS
-tl Zero                   =  Zero
-tl (Pfx (Lbl il) ccs)     =  Pfx (tlp il) $ tl ccs
-tl (Pfx pfx@(Evt _) ccs)  =  Pfx pfx $ tl ccs
-tl (Pfx _ ccs)            =  tl ccs
+tl :: CCS -> CSP
+tl Zero                   =  Skip
+tl (CCSpfx (Lbl il) ccs)  =  CSPpfx (tlp il) $ tl ccs
+tl (CCSpfx _ ccs)         =  tl ccs
 tl (Sum ccs1 ccs2)
-  | null afters           =  Ext csp1 csp2
-  | otherwise             =  Sum (Ext csp1 csp2) (sum afters)
+  | null afters           =  ExtC csp1 csp2
+  | otherwise             =  IntC (ExtC csp1 csp2) (ndc afters)
   where csp1 =  tl(ccs1)
         csp2 =  tl(ccs2)
         csps1 = map tl (afterTau ccs1)
         csps2 = map tl (afterTau ccs2)
         afters = csps1 ++ csps2
-        sum = foldl1 Sum
-tl (Par nms ccs1 ccs2)
-  | S.null nms
-  =  Par sync csp1 csp2
+        ndc = foldl1 IntC
+tl (Comp ccs1 ccs2) =  Par sync csp1 csp2
   where csp1  =  tl(ccs1)
         csp2  =  tl(ccs2)
-        alf1  =  S.map show $ alf csp1
-        alf2  =  S.map show $ alf csp2
+        alf1  =  S.map show $ alpha csp1
+        alf2  =  S.map show $ alpha csp2
         sync  =  alf1 `S.intersection` alf2
-tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Zero
-tl ccs                    =  ccs
+tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Skip
 \end{code}
 
 
@@ -347,7 +342,7 @@ For $P$ a CCSTau process:
     t2csp(S,P) &\defeq& tl(conm(c4star(S,P)))
 \end{eqnarray*}
 \begin{code}
-t2csp :: Set IxLab -> CCS -> CCS
+t2csp :: Set IxLab -> CCS -> CSP
 t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 \end{code}
 
@@ -401,10 +396,10 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 %
 %         c2star :: IxMap -> CCS -> CCS
 %
-%         c2star imap (Pfx (Lbl (alfa,(One i))) ccs)
+%         c2star imap (CCSpfx (Lbl (alfa,(One i))) ccs)
 %           = sumPrefixes imap alfa i $ c2star imap ccs
 %
-%         c2star imap (Par [] ccs1 ccs2)
+%         c2star imap (Comp ccs1 ccs2)
 %           = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
 %                  $ cpar $ map (c2star imap) [ccs1,ccs2]
 %
@@ -412,9 +407,9 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 %
 %         c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
 %
-%         c2star imap (Ren f ccs) = Ren f $ c2star imap ccs
+%         c2star imap (CCSren f ccs) = CCSren f $ c2star imap ccs
 %
-%         c2star imap (Rec x ccs) = Rec x $ c2star imap ccs
+%         c2star imap (CCSmu x ccs) = CCSmu x $ c2star imap ccs
 %
 %         c2star imap ccs = ccs -- 0, X
 % \end{code}
@@ -428,13 +423,13 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 % sumPrefixes :: IxMap -> Label -> Int -> CCS -> CCS
 % sumPrefixes imap alfa i ccs
 %   = case M.lookup (bar alfa) imap of
-%       Nothing  ->  Pfx (Lbl (alfa,One i)) ccs
+%       Nothing  ->  CCSpfx (Lbl (alfa,One i)) ccs
 %       Just evts
 %         -> let alpha2s = map (mkSyncEvt alfa i) $ S.toList evts
 %            in csum $ map (affix ccs) ((alfa,One i):alpha2s)
 %
 % mkSyncEvt alfa i (One j) = i2event alfa i j
-% affix ccs e = Pfx (Lbl e) ccs
+% affix ccs e = CCSpfx (Lbl e) ccs
 % \end{code}
 %
 % \begin{eqnarray*}
