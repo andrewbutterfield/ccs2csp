@@ -240,7 +240,7 @@ instance Show CCS where
    | S.null es  =  showsPrec p ccs
    | otherwise  = showParen (p > pRstr) $
                     showsPrec pRstr' ccs .
-                    showString "|'" .
+                    showString "\x21be" .
                     showSet showIxLab (S.toList es)
 
   showsPrec p (CCSren s2s ccs)
@@ -275,14 +275,16 @@ instance Show CSP where
   showsPrec p (CSPpfx pfx csp)
     = showParen (p > pPfx) $
         showString pfx .
-        showString " -> " .
+        showString " \x2192 " .
         showsPrec pPfx csp
 
   showsPrec p (IntC p1 p2) = showsInfix p pInt pInt' showIntC [p1,p2]
 
   showsPrec p (ExtC p1 p2) = showsInfix p pExt pExt' showExtC [p1,p2]
 
-  showsPrec p (Par nms p1 p2) = showsInfix p pSum pSum' (showPar nms) [p1,p2]
+  showsPrec p (Par nms p1 p2)
+    | S.null nms  =  showsInfix p pPar pPar' showPar0 [p1,p2]
+    | otherwise   =  showsInfix p pPar pPar' (showPar nms) [p1,p2]
 
   showsPrec p (Seq p1 p2) = showsInfix p pSeq pSeq' showSeq [p1,p2]
 
@@ -309,10 +311,12 @@ instance Show CSP where
         showString " @ " .
         showsPrec 0 csp
 
-showIntC p csps  = showI p " |~| " csps
+showIntC p csps  = showI p " \x2a05 " csps
 
-showExtC p csps  = showI p " [] " csps
+showExtC p csps  = showI p " \x25a1 " csps
 
+-- || is \x2225 in unicode
+showPar0 p csps  = showI p " \x2225 " csps
 showPar nms p csps  = showI p (" |"++showNms nms++"| ") csps
 
 showNms nms = concat $ intersperse "," $ S.toList nms
