@@ -63,9 +63,9 @@ i2event ell i j -- reorder indices so first <= second
   | i > j      =  (ell,Two j i)
   | otherwise  =  (ell,Two i j)
 
-showEvent :: IxLab -> String
-showEvent (Std ell,i) = ell ++ show i
-showEvent (Bar ell,i) = ell ++ show i ++ "-bar"
+showIxLab :: IxLab -> String
+showIxLab (Std ell,i) = ell ++ show i
+showIxLab (Bar ell,i) = ell ++ show i ++ "-bar"
 
 ixlbar :: IxLab -> IxLab
 ixlbar (ell,i) = (bar ell,i)
@@ -207,12 +207,15 @@ alpha _                  =  S.empty
 -- Comm+Conc, p44
 -- tightest: {CCSren,Rstr}, CCSpfx, Seq, Comp, Ext, Sum :loosest
 pSum  =    2;  pSum'  = pSum+1
+pInt  =    2;  pInt'  = pInt+1
 pExt  =    4;  pExt'  = pSum+1
+pComp =    6;  pComp' = pComp+1
 pPar  =    6;  pPar'  = pPar+1
 pSeq  =    8;  pSeq'  = pPfx+1
 pPfx  =   10;  pPfx'  = pPfx+1
 pRen  =   12;  pRen'  = pRen+1
 pRstr = pRen;  pRstr' = pRstr+1
+pHide = pRen;  pHide' = pHide+1
 \end{code}
 
 
@@ -231,12 +234,14 @@ instance Show CCS where
 
   showsPrec p (Sum p1 p2) = showsInfix p pSum pSum' showSum [p1,p2]
 
+  showsPrec p (Comp p1 p2) = showsInfix p pComp pComp' showComp [p1,p2]
+
   showsPrec p (Rstr es ccs)
    | S.null es  =  showsPrec p ccs
    | otherwise  = showParen (p > pRstr) $
                     showsPrec pRstr' ccs .
                     showString "|'" .
-                    showEvents (S.toList es)
+                    showSet showIxLab (S.toList es)
 
   showsPrec p (CCSren s2s ccs)
     = showParen (p > pRen) $
@@ -253,8 +258,71 @@ instance Show CCS where
         showString ell .
         showString " @ " .
         showsPrec 0 ccs
+
+showSum p ccss  = showI p " + " ccss
+
+showComp p ccss  = showI p " | " ccss
 \end{code}
 
+\begin{code}
+instance Show CSP where
+
+  showsPrec p Stop  = showString "Stop"
+
+  showsPrec p Skip  = showString "Skip"
+
+  showsPrec p (CSPpfx pfx Stop) = showString pfx
+  showsPrec p (CSPpfx pfx csp)
+    = showParen (p > pPfx) $
+        showString pfx .
+        showString " -> " .
+        showsPrec pPfx csp
+
+  showsPrec p (IntC p1 p2) = showsInfix p pInt pInt' showIntC [p1,p2]
+
+  showsPrec p (ExtC p1 p2) = showsInfix p pExt pExt' showExtC [p1,p2]
+
+  showsPrec p (Par nms p1 p2) = showsInfix p pSum pSum' (showPar nms) [p1,p2]
+
+  showsPrec p (Seq p1 p2) = showsInfix p pSeq pSeq' showSeq [p1,p2]
+
+  showsPrec p (Hide es ccs)
+   | S.null es  =  showsPrec p ccs
+   | otherwise  = showParen (p > pRstr) $
+                    showsPrec pRstr' ccs .
+                    showString "\\" .
+                    showSet id (S.toList es)
+
+  showsPrec p (CSPren s2s csp)
+    = showParen (p > pRen) $
+        showsPrec pRen' csp .
+        showString "[" .
+        showRenFun s2s .
+        showString "]"
+
+  showsPrec p (CSPvar ell) = showString ell
+
+  showsPrec p (CSPmu ell csp)
+    = showParen True $
+        showString "mu " .
+        showString ell .
+        showString " @ " .
+        showsPrec 0 csp
+
+showIntC p csps  = showI p " |~| " csps
+
+showExtC p csps  = showI p " [] " csps
+
+showPar nms p csps  = showI p (" |"++showNms nms++"| ") csps
+
+showNms nms = concat $ intersperse "," $ S.toList nms
+
+showSeq p csps = showI p " ; " csps
+\end{code}
+
+
+
+General-purpose show functions.
 \begin{code}
 showsInfix p pI pI' showI [] = showsPrec p Zero
 showsInfix p pI pI' showI [ccs] = showsPrec p ccs
@@ -263,39 +331,27 @@ showsInfix p pI pI' showI (ccs:ccss)
         showsPrec pI' ccs .
         showI pI' ccss
 
-showSum p ccss  = showI p " + " ccss
-
-showExt p ccss = showI p " [] " ccss
-
-showPar nms p ccss
-  | S.null nms = showI p " | " ccss
-  | otherwise  = showI p (" |"++showNms nms++"| ") ccss
-
-showNms nms = concat $ intersperse "," $ S.toList nms
-
-showSeq p ccss = showI p " ; " ccss
-
 showI p op [] = id
 showI p op (ccs:ccss)
   = showString op .
     showsPrec p ccs .
     showI p op ccss
 
-showEvents [] = id
-showEvents [e] = showString $ showEvent e
-showEvents (e:es)
+showSet showElem [] = id
+showSet showElem [e] = showString $ showElem e
+showSet showElem (e:es)
   = showString "{" .
-    showString (showEvent e) .
+    showString (showElem e) .
     showString "," .
-    showEvents' es .
+    showSet' showElem es .
     showString "}"
 
-showEvents' [] = id
-showEvents' [e] = showString $ showEvent e
-showEvents' (e:es)
-  = showString (showEvent e) .
+showSet' showElem [] = id
+showSet' showElem [e] = showString $ showElem e
+showSet' showElem (e:es)
+  = showString (showElem e) .
     showString "," .
-    showEvents' es
+    showSet showElem es
 
 showRenFun [] = showString ""
 showRenFun [ee] = showEE ee

@@ -229,7 +229,6 @@ gsp iCtxt (Comp ccs1 ccs2)  =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
 gsp iCtxt (CCSpfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
 gsp iCtxt (CCSpfx pfx ccs)         =  CCSpfx pfx $ gsp iCtxt ccs
-gsp _ csp  =  error ("Cannot gsp CSP syntax:("++show csp++")")
 
 -- helpers
 getCCSLbls = S.map getlbl . S.filter isLbl . alf

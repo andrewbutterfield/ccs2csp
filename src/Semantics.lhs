@@ -243,7 +243,7 @@ Corrollary 3 ([CC],p63)
 
 \subsubsection{Recursion}
 
-$X$ is sequential in $E$ if it occurs only inside CCS_Pfx or Sum.
+$X$ is sequential in $E$ if it occurs only inside \verb"CCS_Pfx" or Sum.
 
 $X$ is guarded in $E$ if each occurrence inside some $\ell.F$ within $E$.
 

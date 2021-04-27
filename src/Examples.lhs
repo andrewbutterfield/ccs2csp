@@ -24,10 +24,14 @@ import Semantics
 \subsection{Showing Examples}
 
 \begin{code}
+data Proc = CCS CCS | CSP CSP deriving Show
+\end{code}
+
+\begin{code}
 mkExample ccs
  = putStrLn $ unlines $ map shExample
             $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","tlp  ","t2csp"]
-                  [ ccs   , ccsi  , ccsg  , ccs4  , tlp   , csp   ]
+                  [ CCS ccs   , CCS ccsi  , CCS ccsg  , CCS ccs4  , CSP tlp   , CSP csp   ]
  where
    shExample (label,proc) = label ++ " : " ++ show proc
    ccsi = indexNames ccs
@@ -44,13 +48,13 @@ mkExample ccs
 na = Std "a" ; ea = (na,None);  a = Lbl ea
 nb = Std "b" ; b = Lbl (nb,None)
 nc = Std "c" ; ec = (nc,None); c = Lbl ec
-r = PVar "R"
-p = PVar "P"
+r = CCSvar "R"
+p = CCSvar "P"
 ell = (Std "L",None)
-q = PVar "Q"
+q = CCSvar "Q"
 cc44 = csum [ r
-            , cpar [ Pfx a p
-                   , Pfx b (Rstr (S.singleton ell) q)
+            , cpar [ CCSpfx a p
+                   , CCSpfx b (Rstr (S.singleton ell) q)
                    ]
             ]
 \end{code}
@@ -144,22 +148,22 @@ Should be:
 Examples from Gerard's document, v17.
 \begin{code}
 -- v17, 4.1.2, p18
-s = PVar "S"
+s = CCSvar "S"
 abar = pfxbar a
 x18 = Rstr (S.singleton ea)
-       $ cpar [Pfx a p, cpar [Pfx abar q, cpar [Pfx abar r, Pfx abar s]]]
+       $ cpar [CCSpfx a p, cpar [CCSpfx abar q, cpar [CCSpfx abar r, CCSpfx abar s]]]
 
 --v17, 4.1.2., p19
-xl19 = cpar [Pfx a Zero, Pfx abar Zero]
+xl19 = cpar [CCSpfx a Zero, CCSpfx abar Zero]
 ta = T' "a"
-a0 = Pfx a Zero; abar0 = Pfx abar Zero
-b0 = Pfx b Zero; bbar0 = Pfx bbar Zero
-xr19 = csum [Pfx a $ abar0, csum [Pfx abar $ a0, Pfx ta Zero]]
+a0 = CCSpfx a Zero; abar0 = CCSpfx abar Zero
+b0 = CCSpfx b Zero; bbar0 = CCSpfx bbar Zero
+xr19 = csum [CCSpfx a $ abar0, csum [CCSpfx abar $ a0, CCSpfx ta Zero]]
 
 --v17, 4.1.2, p19 bottom
-xb19 = cpar [ Pfx a (cpar [a0,a0,a0,a0])
+xb19 = cpar [ CCSpfx a (cpar [a0,a0,a0,a0])
             , abar0
-            , Pfx abar (cpar [a0,a0])
+            , CCSpfx abar (cpar [a0,a0])
             ]
 \end{code}
 
@@ -168,11 +172,11 @@ Examples from Vasileios MS Team whiteboard, 24th Sep.
 \begin{code}
 -- a.b.0 | b-bar.a-bar.0
 bbar = pfxbar b
-xms1 = cpar [ Pfx a (Pfx b Zero), Pfx bbar (Pfx abar Zero)]
+xms1 = cpar [ CCSpfx a (CCSpfx b Zero), CCSpfx bbar (CCSpfx abar Zero)]
 
 -- a.b.(abar.0|b.0) | bbar.abar.0
-xms2 = cpar [ Pfx a (Pfx b (cpar [ Pfx abar Zero, Pfx b Zero]))
-              , Pfx bbar (Pfx abar Zero)
+xms2 = cpar [ CCSpfx a (CCSpfx b (cpar [ CCSpfx abar Zero, CCSpfx b Zero]))
+              , CCSpfx bbar (CCSpfx abar Zero)
               ]
 -- manually laid out below -- need better pretty-printing
 -- ( (   a0.(   b1.((a-bar2 + a-bar0;2) | (b3 + b3;4))
@@ -221,7 +225,7 @@ xmp_bAndaIabar = mkExample bAndaIabar
 \end{code}
 
 \begin{code}
-ac0 = Pfx a $ Pfx c Zero
+ac0 = CCSpfx a $ CCSpfx c Zero
 acIabar = cpar [ac0,abar0]
 noacIabar = Rstr (S.singleton ea) acIabar
 bAndacIabar = csum [noacIabar,b0]
@@ -260,7 +264,7 @@ Note that the recursion is under the iterated parallel,
 not enclosing it.
 \begin{code}
 ever :: IxLab -> CCS
-ever evt = Rec "X" $ Pfx (Lbl $ ixlbar evt) $ PVar "X"
+ever evt = CCSmu "X" $ CCSpfx (Lbl $ ixlbar evt) $ CCSvar "X"
 infixl 7 \\
 (\\) :: CCS -> (Set IxLab) -> CCS
 ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
