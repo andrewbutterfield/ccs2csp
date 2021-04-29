@@ -79,7 +79,7 @@ In the last line we assume (promptly) guarded recursion.
 -- isCCS
 afterTau :: CCS -> [CCS]
 afterTau (CCSpfx T ccs)         =  [ccs]
-afterTau (CCSpfx (T' _) ccs)    =  [] -- not considered a tau here !
+afterTau (CCSpfx (T' _ _) ccs)  =  [] -- not considered a tau here !
 afterTau (Sum ccs1 ccs2)     =  afterTau ccs1 ++ afterTau ccs2
 afterTau (Comp ccs1 ccs2)    =  parBodiesAfterTaus ccs1 ccs2
 afterTau (Rstr es ccs)       =  afterTau ccs

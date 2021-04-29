@@ -75,7 +75,7 @@ ixlbar (ell,i) = (bar ell,i)
 data CCS_Pfx
   = T           -- CSS     tau
   | Lbl IxLab   -- CCS     a or a-bar
-  | T' String   -- CCStau  t[a|a-bar]
+  | T' String Index   -- CCStau  t[a|a-bar]
   deriving (Eq,Ord,Read)
 
 type CSP_Pfx = String
@@ -88,7 +88,7 @@ instance Show CCS_Pfx where
   show T                =  "t"
   show (Lbl (Std s,i))  =  s ++ show i
   show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
-  show (T' n)           =  show T ++ "["++n++"|"++n++"-bar]"
+  show (T' n i)           =  show T ++ show i++"["++n++"|"++n++"-bar]"
 
 pfxbar :: CCS_Pfx -> CCS_Pfx
 pfxbar (Lbl e)  =  Lbl $ ixlbar e
@@ -164,7 +164,7 @@ comp = Comp
 \begin{code}
 renamePfx :: RenPairs -> CCS_Pfx -> CCS_Pfx
 renamePfx _   T          =  T
-renamePfx s2s (T' s)     =  T'  $ renameStr s s2s
+renamePfx s2s (T' s i)     =  T' (renameStr s s2s) i
 renamePfx s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
 
 renameIxL :: RenPairs -> IxLab -> IxLab
@@ -315,8 +315,8 @@ showIntC p csps  = showI p " \x2a05 " csps
 
 showExtC p csps  = showI p " \x25a1 " csps
 
--- || is \x2225 in unicode
-showPar0 p csps  = showI p " \x2225 " csps
+-- || is \x2225 in unicode  ||| is \x2af4
+showPar0 p csps  = showI p " ||| " csps
 showPar nms p csps  = showI p (" |"++showNms nms++"| ") csps
 
 showNms nms = concat $ intersperse "," $ S.toList nms
@@ -419,7 +419,7 @@ doRename _   ccs             = ccs
 
 renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
 renPfx _ T            =  T
-renPfx s2s (T' s)     =  T' $ s2s s
+renPfx s2s (T' s i)     =  T' (s2s s) i
 renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell
 
 renIxLab :: (String -> String) -> IxLab -> IxLab

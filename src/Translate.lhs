@@ -40,8 +40,10 @@ indexNames :: CCS -> CCS
 indexNames = fst . iFrom 1
 
 
-iFrom i (CCSpfx pfx ccs) = (CCSpfx (iPfx i pfx) ccs',i')
-  where (ccs',i') = iFrom (i+1) ccs
+iFrom i (CCSpfx pfx ccs) = (CCSpfx pfx' ccs',i'')
+  where
+    (pfx',i') = iPfx i pfx
+    (ccs',i'') = iFrom i' ccs
 iFrom i (Sum p1 p2) = (Sum p1' p2',i')
   where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
 iFrom i (Comp p1 p2) = (Comp p1' p2',i')
@@ -56,10 +58,11 @@ iFrom i (CCSmu nm ccs) = (CCSmu nm ccs',i')
   where (ccs',i') = iFrom i ccs
 iFrom i ccs = (ccs,i)
 
-iPfx :: Int -> CCS_Pfx -> CCS_Pfx
-iPfx i T = T
-iPfx i (Lbl e) = Lbl (iLbl i e)
-iPfx _ pfx = pfx
+iPfx :: Int -> CCS_Pfx -> (CCS_Pfx, Int)
+iPfx i T = (T,i)
+iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2) 
+-- c2ix(t[a|a-bar]) = t[a12|a12-bar]
+iPfx i (Lbl e) = (Lbl (iLbl i e), i+1)
 
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
@@ -317,6 +320,7 @@ tl :: CCS -> CSP
 tl Zero                   =  Skip
 tl (CCSpfx (Lbl il) ccs)  =  CSPpfx (tlp il) $ tl ccs
 tl (CCSpfx _ ccs)         =  tl ccs
+tl (CCSvar pname)         =  CSPvar pname
 tl (Sum ccs1 ccs2)
   | null afters           =  ExtC csp1 csp2
   | otherwise             =  IntC (ExtC csp1 csp2) (ndc afters)

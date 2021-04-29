@@ -155,7 +155,7 @@ x18 = Rstr (S.singleton ea)
 
 --v17, 4.1.2., p19
 xl19 = cpar [CCSpfx a Zero, CCSpfx abar Zero]
-ta = T' "a"
+ta = T' "a" None
 a0 = CCSpfx a Zero; abar0 = CCSpfx abar Zero
 b0 = CCSpfx b Zero; bbar0 = CCSpfx bbar Zero
 xr19 = csum [CCSpfx a $ abar0, csum [CCSpfx abar $ a0, CCSpfx ta Zero]]
