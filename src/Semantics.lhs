@@ -110,7 +110,7 @@ $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
 parBodiesAfterOwnTaus :: CCS -> CCS -> [CCS]
 parBodiesAfterOwnTaus ccs1 ccs2
-  = map (comp ccs1) ccs2s' ++ map (flip comp ccs2) ccs1s'
+  = map (Comp ccs1) ccs2s' ++ map (flip Comp ccs2) ccs1s'
   where
     ccs1s' = afterTau ccs1
     ccs2s' = afterTau ccs2
@@ -176,7 +176,7 @@ $P_1 | \dots | P'_j | \dots | P_n$.
 \begin{code}
 parBodiesAfterEvts :: CCS -> CCS -> [CCS]
 parBodiesAfterEvts ccs1 ccs2
-  = map (comp ccs1) ccs2s' ++ map (flip comp ccs2) ccs1s'
+  = map (Comp ccs1) ccs2s' ++ map (flip Comp ccs2) ccs1s'
   where
     alf1 = S.toList $ alf ccs1
     alf2 = S.toList $ alf ccs2

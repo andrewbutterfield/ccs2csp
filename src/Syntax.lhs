@@ -18,8 +18,11 @@ import Data.List
 We have a meeting of two worlds here,
 CSP and CCS.
 
-We use CCS notion of ``label'' as basic.
-A CSP ``event'' is represented a \texttt{Std} label.
+\subsection{Calculus of Communicating Systems}
+
+\subsubsection{CCS Syntax}
+
+For CCS, we define start by defining labels:
 \begin{code}
 data Label = Std String | Bar String deriving (Eq,Ord,Read)
 
@@ -36,6 +39,7 @@ bar (Std s)  =  Bar s
 bar (Bar s)  =  Std s
 \end{code}
 
+We then introduce a representation of possibly having up to two indices.
 \begin{code}
 data Index
   = None
@@ -49,6 +53,7 @@ instance Show Index where
   show (Two i j)  =  show (One i) ++ ";" ++ show (One j)
 \end{code}
 
+Our CCS ``labels'' are indexable.
 \begin{code}
 type IxLab = (Label, Index)
 
@@ -71,14 +76,16 @@ ixlbar :: IxLab -> IxLab
 ixlbar (ell,i) = (bar ell,i)
 \end{code}
 
+A CCS prefix is either a tau ($\tau$),
+or a (possibly indexed) label ($\ell$,$\bar\ell$).
+For CCSTau, we also add (possibly indexed) visible synchronisations
+($\tau[a|\bar a]$).
 \begin{code}
 data CCS_Pfx
-  = T           -- CSS     tau
-  | Lbl IxLab   -- CCS     a or a-bar
+  = T                 -- CSS tau
+  | Lbl IxLab         -- CCS a or a-bar
   | T' String Index   -- CCStau  t[a|a-bar]
   deriving (Eq,Ord,Read)
-
-type CSP_Pfx = String
 
 isLbl :: CCS_Pfx -> Bool
 isLbl (Lbl _)  =  True
@@ -98,10 +105,6 @@ pfxbar pfx      =  pfx
 \begin{code}
 type RenPairs = [(String,String)]
 \end{code}
-
-
-We are going to define an abstract syntax that will cover
-both CSS (and its variants), as well as CSP.
 
 For CCS we have the syntax:
 \begin{eqnarray*}
@@ -126,40 +129,8 @@ data CCS
   | CCSmu String CCS
   deriving (Eq,Ord,Read)
 \end{code}
-For CSP we have the syntax:
-\begin{eqnarray*}
-  P,Q &::=&  Stop
-             \mid Skip
-             \mid a \then P
-             \mid P;Q
-             \mid P \parallel_A Q
-             \mid P \sqcap Q
-             \mid P \Box Q
-             \mid P\hide H
-             \mid f(P)
-             \mid X
-             \mid \mu X \bullet P
-\end{eqnarray*}
-\begin{code}
-data CSP
-  = Stop
-  | Skip
-  | CSPpfx CSP_Pfx CSP
-  | Seq CSP CSP
-  | IntC CSP CSP
-  | ExtC CSP CSP
-  | Par (Set String) CSP CSP
-  | Hide (Set String) CSP
-  | CSPren RenPairs CSP
-  | CSPvar String
-  | CSPmu String CSP
-  deriving (Eq,Ord,Read)
-\end{code}
 
-\begin{code}
-comp :: CCS -> CCS -> CCS
-comp = Comp
-\end{code}
+\subsubsection{CCS Renaming}
 
 \begin{code}
 renamePfx :: RenPairs -> CCS_Pfx -> CCS_Pfx
@@ -170,12 +141,9 @@ renamePfx s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
 renameIxL :: RenPairs -> IxLab -> IxLab
 renameIxL s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
 renameIxL s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
-
-renameStr s []  =  s
-renameStr s ((f,t):s2s)
-  |  s == f     =  t
-  |  otherwise  =  renameStr s s2s
 \end{code}
+
+\subsubsection{CCS Alphabets}
 
 \begin{code}
 alf :: CCS -> Set CCS_Pfx
@@ -189,18 +157,6 @@ alf _                 =  S.empty
 
 alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
-
-alpha :: CSP -> Set CSP_Pfx
-alpha (CSPpfx pfx csp)   =  S.singleton pfx `S.union` alpha csp
-alpha (Seq csp1 csp2)    =  alpha csp1 `S.union` alpha csp2
-alpha (IntC csp1 csp2)   =  alpha csp1 `S.union` alpha csp2
-alpha (ExtC csp1 csp2)   =  alpha csp1 `S.union` alpha csp2
-alpha (Par _ csp1 csp2)  =  alpha csp1 `S.union` alpha csp2
-alpha (Hide _ csp)       =  alpha csp
-alpha (CSPren s2s csp)   =  S.map (flip renameStr s2s) $ alpha csp
-alpha (CSPmu _ csp)      =  alpha csp
-alpha _                  =  S.empty
-
 \end{code}
 
 \begin{code}
@@ -218,7 +174,7 @@ pRstr = pRen;  pRstr' = pRstr+1
 pHide = pRen;  pHide' = pHide+1
 \end{code}
 
-
+\subsubsection{CCS Printing}
 
 \begin{code}
 instance Show CCS where
@@ -263,6 +219,124 @@ showSum p ccss  = showI p " + " ccss
 
 showComp p ccss  = showI p " | " ccss
 \end{code}
+
+
+\subsubsection{CCS Smart Builders}
+
+\begin{code}
+csum :: [CCS] -> CCS
+csum [] = Zero
+csum [ccs] = ccs
+csum (ccs:prcs) = Sum ccs $ csum prcs
+
+cpar :: [CCS] -> CCS
+cpar [] = Zero
+cpar [ccs] = ccs
+cpar (ccs:prcs) = Comp ccs $ cpar prcs
+
+
+rstr :: [IxLab] -> CCS -> CCS
+rstr [] ccs = ccs
+rstr es ccs = Rstr (S.fromList es) ccs
+\end{code}
+
+
+\subsubsection{CCS Queries}
+
+\begin{code}
+prefixesOf :: CCS -> Set CCS_Pfx
+prefixesOf (CCSpfx pfx ccs)   =  S.singleton pfx `S.union` prefixesOf ccs
+prefixesOf (Sum p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Comp p1 p2)   =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Rstr ss ccs)   =  prefixesOf ccs
+prefixesOf (CCSren s2s ccs)   =  prefixesOf $ doRename (endo s2s) ccs
+prefixesOf (CCSmu s ccs)     =  prefixesOf ccs
+prefixesOf _               =  S.empty
+\end{code}
+
+\subsubsection{CCS Actions}
+
+
+\begin{code}
+doRename :: (String -> String) -> CCS -> CCS
+doRename s2s (CCSpfx pfx ccs)   =  CCSpfx (renPfx s2s pfx) $ doRename s2s ccs
+doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Comp p1 p2)  =  Comp (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Rstr es ccs)   =  Rstr (S.map (renIxLab s2s) es) $ doRename s2s ccs
+doRename s2s (CCSren s2s' ccs)  =  doRename s2s (doRename (endo s2s') ccs)
+doRename s2s (CCSmu s ccs)     =  CCSmu s $ doRename s2s ccs
+doRename _   ccs             = ccs
+
+renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
+renPfx _ T            =  T
+renPfx s2s (T' s i)     =  T' (s2s s) i
+renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell
+
+renIxLab :: (String -> String) -> IxLab -> IxLab
+renIxLab s2s (ell,i)  =  (renName s2s ell,i)
+
+renName :: (String -> String) -> Label -> Label
+renName s2s (Std ell)  =  Std $ s2s ell
+renName s2s (Bar ell)  =  Bar $ s2s ell
+\end{code}
+
+\newpage
+\subsection{Communicating Sequential Processes}
+
+\subsubsection{CSP Syntax}
+
+For CSP, we simply consider events as uninterpreted strings:
+\begin{code}
+type CSP_Pfx = String
+\end{code}
+
+For CSP we have the syntax:
+\begin{eqnarray*}
+  P,Q &::=&  Stop
+             \mid Skip
+             \mid a \then P
+             \mid P;Q
+             \mid P \parallel_A Q
+             \mid P \sqcap Q
+             \mid P \Box Q
+             \mid P\hide H
+             \mid f(P)
+             \mid X
+             \mid \mu X \bullet P
+\end{eqnarray*}
+\begin{code}
+data CSP
+  = Stop
+  | Skip
+  | CSPpfx CSP_Pfx CSP
+  | Seq CSP CSP
+  | IntC CSP CSP
+  | ExtC CSP CSP
+  | Par (Set String) CSP CSP
+  | Hide (Set String) CSP
+  | CSPren RenPairs CSP
+  | CSPvar String
+  | CSPmu String CSP
+  deriving (Eq,Ord,Read)
+\end{code}
+
+
+\subsubsection{CSP Alphabets}
+
+\begin{code}
+alpha :: CSP -> Set CSP_Pfx
+alpha (CSPpfx pfx csp)   =  S.singleton pfx `S.union` alpha csp
+alpha (Seq csp1 csp2)    =  alpha csp1 `S.union` alpha csp2
+alpha (IntC csp1 csp2)   =  alpha csp1 `S.union` alpha csp2
+alpha (ExtC csp1 csp2)   =  alpha csp1 `S.union` alpha csp2
+alpha (Par _ csp1 csp2)  =  alpha csp1 `S.union` alpha csp2
+alpha (Hide _ csp)       =  alpha csp
+alpha (CSPren s2s csp)   =  S.map (flip renameStr s2s) $ alpha csp
+alpha (CSPmu _ csp)      =  alpha csp
+alpha _                  =  S.empty
+\end{code}
+
+\subsubsection{CSP Printing}
 
 \begin{code}
 instance Show CSP where
@@ -324,9 +398,36 @@ showNms nms = concat $ intersperse "," $ S.toList nms
 showSeq p csps = showI p " ; " csps
 \end{code}
 
+% % Uncomment only when content available
+% \subsubsection{CSP Smart Builders}
+%
+% \subsubsection{CSP Queries}
+%
+% \subsubsection{CSP Actions}
 
 
-General-purpose show functions.
+
+
+\subsection{Shared CCS/CSP Functions}
+
+\subsubsection{CCS/CSP Renaming}
+
+\begin{code}
+renameStr :: String -> RenPairs -> String
+renameStr s []  =  s
+renameStr s ((f,t):s2s)
+  |  s == f     =  t
+  |  otherwise  =  renameStr s s2s
+
+endo :: Eq a => [(a,a)] -> a -> a
+endo [] a = a
+endo ((a1,a2):as) a
+ | a == a1    =  a2
+ | otherwise  =  endo as a
+\end{code}
+
+\subsubsection{CCS/CSP Printing}
+
 \begin{code}
 showsInfix p pI pI' showI [] = showsPrec p Zero
 showsInfix p pI pI' showI [ccs] = showsPrec p ccs
@@ -367,65 +468,4 @@ showRenFun (ee:ees)
 showEE (e1,e2) = showString e1 .
                  showString "/" .
                  showString e2
-\end{code}
-
-Smart Builders:
-\begin{code}
-csum :: [CCS] -> CCS
-csum [] = Zero
-csum [ccs] = ccs
-csum (ccs:prcs) = Sum ccs $ csum prcs
-
-cpar :: [CCS] -> CCS
-cpar [] = Zero
-cpar [ccs] = ccs
-cpar (ccs:prcs) = comp ccs $ cpar prcs
-
-
-rstr :: [IxLab] -> CCS -> CCS
-rstr [] ccs = ccs
-rstr es ccs = Rstr (S.fromList es) ccs
-
-endo :: Eq a => [(a,a)] -> a -> a
-endo [] a = a
-endo ((a1,a2):as) a
- | a == a1    =  a2
- | otherwise  =  endo as a
-\end{code}
-
-Summaries:
-\begin{code}
-prefixesOf :: CCS -> Set CCS_Pfx
-prefixesOf (CCSpfx pfx ccs)   =  S.singleton pfx `S.union` prefixesOf ccs
-prefixesOf (Sum p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Comp p1 p2)   =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Rstr ss ccs)   =  prefixesOf ccs
-prefixesOf (CCSren s2s ccs)   =  prefixesOf $ doRename (endo s2s) ccs
-prefixesOf (CCSmu s ccs)     =  prefixesOf ccs
-prefixesOf _               =  S.empty
-\end{code}
-
-
-Actions:
-\begin{code}
-doRename :: (String -> String) -> CCS -> CCS
-doRename s2s (CCSpfx pfx ccs)   =  CCSpfx (renPfx s2s pfx) $ doRename s2s ccs
-doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Comp p1 p2)  =  Comp (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Rstr es ccs)   =  Rstr (S.map (renIxLab s2s) es) $ doRename s2s ccs
-doRename s2s (CCSren s2s' ccs)  =  doRename s2s (doRename (endo s2s') ccs)
-doRename s2s (CCSmu s ccs)     =  CCSmu s $ doRename s2s ccs
-doRename _   ccs             = ccs
-
-renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
-renPfx _ T            =  T
-renPfx s2s (T' s i)     =  T' (s2s s) i
-renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell
-
-renIxLab :: (String -> String) -> IxLab -> IxLab
-renIxLab s2s (ell,i)  =  (renName s2s ell,i)
-
-renName :: (String -> String) -> Label -> Label
-renName s2s (Std ell)  =  Std $ s2s ell
-renName s2s (Bar ell)  =  Bar $ s2s ell
 \end{code}
