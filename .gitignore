@@ -7,6 +7,7 @@ MAIN.fdb_latexmk
 MAIN.fls
 MAIN.log
 MAIN.synctex.gz
+MAIN.synctex.gz(busy)
 MAIN.toc
 *.out
 ccs2csp-in-Haskell.pdf
