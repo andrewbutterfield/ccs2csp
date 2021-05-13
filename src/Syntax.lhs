@@ -5,6 +5,7 @@ Copyright  Andrew Buttefield (c) 2020-21
 LICENSE: BSD3, see file LICENSE at ccs2csp root
 \end{verbatim}
 \begin{code}
+{-# LANGUAGE CPP #-}
 module Syntax where
 
 import Data.Set (Set)
@@ -106,7 +107,11 @@ pfxbar pfx      =  pfx
 type RenPairs = [(String,String)]
 \end{code}
 
-For CCS we have the syntax:
+For CCS we have the syntax%
+\footnote{
+Note that we use $\restrict$ to represent CCS restriction here,
+to avoid confusion with $\hide$, which denotes CSP's hide operator.
+}:
 \begin{eqnarray*}
   P,Q &::=&  0
              \mid \alpha.P
@@ -117,6 +122,7 @@ For CCS we have the syntax:
              \mid X
              \mid \mu X \bullet P
 \end{eqnarray*}
+
 \begin{code}
 data CCS
   = Zero
@@ -163,7 +169,12 @@ alfPfx _          =  S.empty
 
 CCS Symbols:
 \begin{code}
-restrictSym  =  "\x21be"
+#ifdef mingw32_HOST_OS
+restrictSym  =  " |' "
+#endif
+#ifndef mingw32_HOST_OS
+restrictSym  =  " \x21be "
+#endif
 \end{code}
 
 
@@ -331,9 +342,16 @@ alpha _                  =  S.empty
 
 CSP Symbols:
 \begin{code}
+#ifdef mingw32_HOST_OS
+thenSym  =  " -> "
+ndcSym   =  " |~| "
+extCSym  =  " [] "
+#endif
+#ifndef mingw32_HOST_OS
 thenSym  =  " \x2192 "
 ndcSym   =  " \x2a05 "
 extCSym  =  " \x25a1 "
+#endif
 \end{code}
 
 \begin{code}
@@ -428,8 +446,14 @@ endo ((a1,a2):as) a
 
 Common Symbols:
 \begin{code}
+#ifdef mingw32_HOST_OS
+muSym      =  "mu "
+bulletSym  =  " @ "
+#endif
+#ifndef mingw32_HOST_OS
 muSym      =  "\x03bc "
 bulletSym  =  " \x2022 "
+#endif
 \end{code}
 
 \begin{code}
