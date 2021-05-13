@@ -21,19 +21,42 @@ import Semantics
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
+\subsection{Milners ``Comms and Conc'' book.}
+
+The following example is used to demonstrate the precedence
+of the various CCS binary operators.
+\begin{code}
+-- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
+p = CCSvar "P" ; q = CCSvar "Q" ; r = CCSvar "R" ; s = CCSvar "S"
+ell = (Std "L",None)
+cc44 = csum [ r
+            , cpar [ CCSpfx a p
+                   , CCSpfx b (Rstr (S.singleton ell) q)
+                   ]
+            ]
+\end{code}
+It does not play well with the translation because the abstract syntax
+does not support names for restriction sets, only explicit set enumerations.
+
+\newpage
 \subsection{Showing Examples}
 
+We create a datatype that can be either CCS or CSP,
+so we can have lists showing the steps in a transformation
+from CCS to CSP.
 \begin{code}
 data Proc = CCS CCS | CSP CSP deriving Show
 \end{code}
 
+The \texttt{genExample} function takes a CCS term
+and applies the translation step-by-step,
+to generate a list of same, paired with meaningful names.
 \begin{code}
-mkExample ccs
- = putStrLn $ unlines $ map shExample
-            $ zip ["ccs  ","c2ix ","g*0  ","cs4  ","tlp  ","t2csp"]
-                  [ CCS ccs   , CCS ccsi  , CCS ccsg  , CCS ccs4  , CSP tlp   , CSP csp   ]
+genExample :: CCS ->  [(String,Proc)]
+genExample ccs
+ = zip ["ccs  "    , "c2ix "   , "g*0  "   , "cs4  "   , "tlp  "   , "t2csp" ]
+       [ CCS ccs   , CCS ccsi  , CCS ccsg  , CCS ccs4  , CSP tlp   , CSP csp ]
  where
-   shExample (label,proc) = label ++ " : " ++ show proc
    ccsi = indexNames ccs
    ccsg = gsp0 ccsi
    ccs4 = c4star S.empty ccs
@@ -41,216 +64,137 @@ mkExample ccs
    csp = t2csp S.empty ccs
 \end{code}
 
-\subsection{Milners ``Comms and Conc'' book.}
-
+We use \texttt{runExample} to display that list
 \begin{code}
-  -- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
-na = Std "a" ; ea = (na,None);  a = Lbl ea
-nb = Std "b" ; b = Lbl (nb,None)
-nc = Std "c" ; ec = (nc,None); c = Lbl ec
-r = CCSvar "R"
-p = CCSvar "P"
-ell = (Std "L",None)
-q = CCSvar "Q"
-cc44 = csum [ r
-            , cpar [ CCSpfx a p
-                   , CCSpfx b (Rstr (S.singleton ell) q)
-                   ]
-            ]
+showExample :: [(String,Proc)] -> String
+showExample  =  unlines . map shExample
+ where
+   shExample (label,proc) = label ++ " : " ++ show proc
 \end{code}
 
-\subsection{Gerard's Examples (recent)}
+We use \texttt{runExample} to to generate and display that list
+\begin{code}
+runExample :: CCS -> IO ()
+runExample  =  putStrLn . showExample . genExample
+\end{code}
 
-Based on G. Ekembe N., ``From CCS to CSP'', April 15th 2021:
 
-\paragraph{Defn 3.1, p11}
+\newpage
+\subsection{Collection of Useful ``Bits''}
 
+\begin{code}
+na = Std "a" ; ea = (na,None);  a = Lbl ea ; abar = pfxbar a
+nb = Std "b" ; eb = (nb,None);  b = Lbl eb ; bbar = pfxbar b
+nc = Std "c" ; ec = (nc,None);  c = Lbl ec ; cbar = pfxbar c
+a0 = CCSpfx a Zero; abar0 = CCSpfx abar Zero
+b0 = CCSpfx b Zero; bbar0 = CCSpfx bbar Zero
+c0 = CCSpfx c Zero; cbar0 = CCSpfx cbar Zero
+\end{code}
+
+\subsection{Examples}
+
+
+
+Example 6 from [EKB]:
 \begin{eqnarray*}
-  c2ccs\tau(P|Q)
-  &\defeq&
- (c2ccs\tau(P)|_T c2ccs\tau(Q))
- \hide_T
- \{\tau[\bar a|a] | a \in \Alf P, \bar a \in \Alf Q\}
-\end{eqnarray*}
-
-\paragraph{Lemma 1, p12}
-
-For CCSTau processes:
-\begin{equation*}
-   P_\tau | Q_\tau
-   =
-   (P_\tau |_T Q_\tau)
-   \hide_T
-   \{\tau[\bar a|a] | a \in \Alf P, \bar a \in \Alf Q\}
-\end{equation*}
-
-\paragraph{Defn 4.8, p21}
-
-\begin{eqnarray*}
-   \vdots
-\\ tl(P_1 | P_2)
-   &\defeq&
-   tl(P_1) \parallel_{\setof{a | a \in \Alf P_1 \cap \Alf P_2}} tl(P_2)
-\\ \vdots
-\end{eqnarray*}
-
-\paragraph{Example 4.7, p21}
-
-\begin{eqnarray*}
-   c4star(a.0|\bar a.0)
-   &=&
-   (a_1.0 + a_{12}.0)|(\bar a_2.0 + \bar a_{12}.0)
-\\ c4star(a.0|\bar a.0)
-   &=&
-   (a_1.0 + a_{12}.0)|(a_2.0 + a_{12}.0)
-\\ tl(c4star(a.0|\bar a.0))
-   &=&
+   \lefteqn{a.0|\bar a.0}
+\\ &\leadsto&
    (a_1 \then Stop \extc a_{12} \then Stop)
    \parallel_{\setof{a_12}}
    (a_2 \then Stop \extc a_{12} \then Stop)
 \end{eqnarray*}
+\begin{code}
+aIabar = cpar [a0,abar0]
+xmp_aIabar = runExample aIabar
+\end{code}
 
-\paragraph{Example 4.8, pp23--4}
+Example 4 from [EKB]: $(a.0|\bar a.0)\restrict\setof a$
+\begin{code}
+-- p21 g*({},(a.0 | a-bar.0)|' {a})
+   -- =  ((a1.0+a12.0)|(a2-bar.0+a12-bar.0)) |' {a1,a2}
+noaIabar = Rstr (S.singleton ea) aIabar
+xmp_noaIabar = runExample noaIabar
+\end{code}
+
+Example 7 from [EKB]: $ (a.0|\bar a.0)\restrict\setof a + b.0$
 
 \begin{eqnarray*}
-   (a.0|\bar a.0)\restrict \setof{a} + b.0
-   &\equiv& \tau.0 + b.0
-\end{eqnarray*}
-
-\begin{eqnarray*}
-   && t2csp((a.0|\bar a.0)\restrict \setof{a} + b.0)
-\\&=& ccs-par\; def
-\\ && t2csp((a.0|_T\bar a.0)\hide_T \setof{a} + b.0)
-\\&=& t2csp\; def
-\\ && t2csp((a.0|_T\bar a.0)\hide_T \setof{a} \restrict\setof a) \extc  t2csp(b.0)
-\\&=& t2csp\; def
-\\ && ((a_1 \then Stop \extc a_{12} \then Stop)
+   \lefteqn{(a.0|\bar a.0)\restrict \setof{a} + b.0}
+\\ &\equiv& \tau.0 + b.0
+\\ &\leadsto& ((a_1 \then Stop \extc a_{12} \then Stop)
 \parallel_{\setof{a_12}}
 (a_2 \then Stop \extc a_{12} \then Stop))
        \hide_{csp} \setof{a_1,a_2,a_{12}}
        \restrict_{csp}\setof{a_1,a_2})
       \extc  b \then STOP
+\\ && CCS: Stop \extc b \then Stop
+\\ &&  CCS\tau:  a_{12} \then Stop \extc b \then Stop
 \end{eqnarray*}
 
-
-\paragraph{Defn 4.8, p21}
-
-Should be:
-\begin{eqnarray*}
-    CCS: && Stop \extc b \then Stop
-\\  CCS\tau: && a_{12} \then Stop \extc b \then Stop
-\end{eqnarray*}
-
-
-
-\subsection{Old Examples}
-
-Examples from Gerard's document, v17.
 \begin{code}
--- v17, 4.1.2, p18
-s = CCSvar "S"
-abar = pfxbar a
+-- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
+bAndaIabar = csum [noaIabar,b0]
+xmp_bAndaIabar = runExample bAndaIabar
+\end{code}
+
+$$ (a.c.0|\bar a.0)\restrict\setof a + b.0$$
+\begin{code}
+ac0 = CCSpfx a $ CCSpfx c Zero
+acIabar = cpar [ac0,abar0]
+noacIabar = Rstr (S.singleton ea) acIabar
+bAndacIabar = csum [noacIabar,b0]
+xmp_bAndacIabar = runExample bAndacIabar
+\end{code}
+
+Example 2 from [EKB]:
+$a.P + \tau.Q \leadsto (t2csp(a.P)\Box t2csp(Q)) \sqcap t2csp(Q)$ ?
+\begin{code}
+xmp2 = cpar [CCSpfx a p,CCSpfx T q]
+\end{code}
+
+
+$$ a.b.0 | \bar b.\bar a.0$$
+\begin{code}
+-- a.b.0 | b-bar.a-bar.0
+xms1 = cpar [ CCSpfx a (CCSpfx b Zero), CCSpfx bbar (CCSpfx abar Zero)]
+\end{code}
+
+$$ a.b.(\bar a.0|b.0) | \bar b.\bar a.0$$
+\begin{code}
+-- a.b.(abar.0|b.0) | bbar.abar.0
+xms2 = cpar [ CCSpfx a (CCSpfx b (cpar [ CCSpfx abar Zero, CCSpfx b Zero]))
+              , CCSpfx bbar (CCSpfx abar Zero)
+              ]
+\end{code}
+
+
+
+$$(a.P|\bar a.Q|\bar a.R|\bar a.S)\restrict\setof a$$
+
+\begin{code}
 x18 = Rstr (S.singleton ea)
        $ cpar [CCSpfx a p, cpar [CCSpfx abar q, cpar [CCSpfx abar r, CCSpfx abar s]]]
+\end{code}
 
---v17, 4.1.2., p19
-xl19 = cpar [CCSpfx a Zero, CCSpfx abar Zero]
-ta = T' "a" None
-a0 = CCSpfx a Zero; abar0 = CCSpfx abar Zero
-b0 = CCSpfx b Zero; bbar0 = CCSpfx bbar Zero
-xr19 = csum [CCSpfx a $ abar0, csum [CCSpfx abar $ a0, CCSpfx ta Zero]]
-
---v17, 4.1.2, p19 bottom
+$$a.0|\bar a.0|\bar a.0|\bar a.0$$
+\begin{code}
 xb19 = cpar [ CCSpfx a (cpar [a0,a0,a0,a0])
             , abar0
             , CCSpfx abar (cpar [a0,a0])
             ]
 \end{code}
 
-\newpage
-Examples from Vasileios MS Team whiteboard, 24th Sep.
+Example 5 from [EKB]:
+$(a.P)\restrict\setof a = 0$
 \begin{code}
--- a.b.0 | b-bar.a-bar.0
-bbar = pfxbar b
-xms1 = cpar [ CCSpfx a (CCSpfx b Zero), CCSpfx bbar (CCSpfx abar Zero)]
-
--- a.b.(abar.0|b.0) | bbar.abar.0
-xms2 = cpar [ CCSpfx a (CCSpfx b (cpar [ CCSpfx abar Zero, CCSpfx b Zero]))
-              , CCSpfx bbar (CCSpfx abar Zero)
-              ]
--- manually laid out below -- need better pretty-printing
--- ( (   a0.(   b1.((a-bar2 + a-bar0;2) | (b3 + b3;4))
---          + b1;4.((a-bar2 + a-bar0;2) | (b3 + b3;4))
---          )
---   + a0;2.(   b1.((a-bar2 + a-bar0;2) | (b3 + b3;4))
---          + b1;4.((a-bar2 + a-bar0;2) | (b3 + b3;4))
---          )
---   + a0;5.(   b1.((a-bar2 + a-bar0;2) | (b3 + b3;4))
---          + b1;4.((a-bar2 + a-bar0;2) | (b3 + b3;4))
---          )
---   )
---   |
---   (   b-bar4.(a-bar5 + a-bar0;5)
---   + b-bar1;4.(a-bar5 + a-bar0;5)
---   + b-bar3;4.(a-bar5 + a-bar0;5)
---   )
--- )
--- \{a0;5,b1;4,b3;4}
+aPra = Rstr (S.singleton ea) (CCSpfx a p)
 \end{code}
 
-Examples from [GEN, v19 Note4+] and [VK Note 4]
-
-\begin{code}
--- GEN: v19 Note 4 (update):
--- p20 g*({},a.0 | a-bar.0) =  (a1.0+a12.0)|(a2-bar.0+a12-bar.0)
-aIabar = cpar [a0,abar0]
-xmp_aIabar = mkExample aIabar
-
--- p21 g*({},(a.0 | a-bar.0)|' {a})
-   -- =  ((a1.0+a12.0)|(a2-bar.0+a12-bar.0)) |' {a1,a2}
-noaIabar = Rstr (S.singleton ea) aIabar
-xmp_noaIabar = mkExample noaIabar
-
--- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
-bAndaIabar = csum [noaIabar,b0]
-xmp_bAndaIabar = mkExample bAndaIabar
-
--- VK:
--- (a1 | a2-bar)[g*]   -->  (a1 + a12 | a2-bar + a12-bar)
--- a \restrict a | a-bar  -->  a2
--- (a1 | a2-bar) \restrict a   -->  a2  STOP  (?)
--- (a1 | a2-bar)\restrict(a1,a2)[g*,0]  --> a2 STOP ?
--- ( a1 \restrict a1 |  a2-bar)[g*,0]
-    -- -->  (a1+a12)\restrict a1,a12 | a2-bar + a12-bar
-\end{code}
-
-\begin{code}
-ac0 = CCSpfx a $ CCSpfx c Zero
-acIabar = cpar [ac0,abar0]
-noacIabar = Rstr (S.singleton ea) acIabar
-bAndacIabar = csum [noacIabar,b0]
-xmp_bAndacIabar = mkExample bAndacIabar
-\end{code}
-\begin{verbatim}
-*Examples> xmp_bAndacIabar
-ccs   : (a.c | a-bar)|'a + b
-c2ix  : (a1.c2 | a3-bar)|'{a1,a3-bar} + b4
-g*0   : ((a1.c2 + a1;3.c2) | (a3-bar + a1;3-bar))|'{a1,a3-bar} + b4
-cs4   : ((a1.c2 + a1;3.c2) | (a3-bar + a1;3-bar))|'{a1,a3-bar} + b4
-tlp   : ((a_1.c_2 [] a_1_3.c_2) |a_1_3| (a_3 [] a_1_3)) |a_1,a_3| 0 [] b_4 + c_2 | 0
-t2csp : ((a_1.c_2 [] a_1_3.c_2) |a_1_3| (a_3 [] a_1_3)) |a_1,a_3| 0 [] b_4 + c_2 | 0
-\end{verbatim}
-We should not have \verb"c_2" at the end, just \verb"b_4".
 \subsection{CSP Hiding in CCS}
 
 
-In [GEN v18, Def 2.1, p7] we have:
-\begin{eqnarray*}
-   P \hide A &\defeq& ( P \mid \mu X (\Pi_{} a.X))\restrict A
-\end{eqnarray*}
-
-Looking up the referecence ([16])  cited there (Milner)
-we see the following, simplified here a bit:
+We see the following definition of hiding by Milner,
+simplified here a bit:
 \begin{eqnarray*}
    Ever(\alpha) &=& \alpha.Ever(\alpha)
 \\ P \hide H &=&
@@ -260,8 +204,6 @@ we see the following, simplified here a bit:
    &\defeq&
    ( P \mid \Pi_{\ell \in H} (\mu X . \bar\ell . X) ) \restrict H
 \end{eqnarray*}
-Note that the recursion is under the iterated parallel,
-not enclosing it.
 \begin{code}
 ever :: IxLab -> CCS
 ever evt = CCSmu "X" $ CCSpfx (Lbl $ ixlbar evt) $ CCSvar "X"
@@ -269,14 +211,5 @@ infixl 7 \\
 (\\) :: CCS -> (Set IxLab) -> CCS
 ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
 \end{code}
-
-Here we want to prove(?) that
-\begin{eqnarray*}
-\\ g^*(S,P \hide B) &=& g^*(S,P) \hide g^*(S\cup B,B)
-\end{eqnarray*}
-\begin{code}
-prop_gstar_hide evts ccs ilbls
- = gsp evts (ccs \\ ilbls)
-   ==
-   gsp evts ccs \\ gsb (evts `S.union` ilbls) ilbls
-\end{code}
+Of interest here, is if our translation of $P\hide H$ as defined above
+is equivalent to translating $P$ to CSP, and then doing the hiding.
