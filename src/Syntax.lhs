@@ -159,22 +159,13 @@ alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
 \end{code}
 
+\subsubsection{CCS Printing}
+
+CCS Symbols:
 \begin{code}
--- Comm+Conc, p44
--- tightest: {CCSren,Rstr}, CCSpfx, Seq, Comp, Ext, Sum :loosest
-pSum  =    2;  pSum'  = pSum+1
-pInt  =    2;  pInt'  = pInt+1
-pExt  =    4;  pExt'  = pSum+1
-pComp =    6;  pComp' = pComp+1
-pPar  =    6;  pPar'  = pPar+1
-pSeq  =    8;  pSeq'  = pPfx+1
-pPfx  =   10;  pPfx'  = pPfx+1
-pRen  =   12;  pRen'  = pRen+1
-pRstr = pRen;  pRstr' = pRstr+1
-pHide = pRen;  pHide' = pHide+1
+restrictSym  =  "\x21be"
 \end{code}
 
-\subsubsection{CCS Printing}
 
 \begin{code}
 instance Show CCS where
@@ -196,7 +187,7 @@ instance Show CCS where
    | S.null es  =  showsPrec p ccs
    | otherwise  = showParen (p > pRstr) $
                     showsPrec pRstr' ccs .
-                    showString "\x21be" .
+                    showString restrictSym .
                     showSet showIxLab (S.toList es)
 
   showsPrec p (CCSren s2s ccs)
@@ -206,13 +197,13 @@ instance Show CCS where
         showRenFun s2s .
         showString "]"
 
-  showsPrec p (CCSvar ell) = showString ell
+  showsPrec p (CCSvar v) = showString v
 
-  showsPrec p (CCSmu ell ccs)
+  showsPrec p (CCSmu nm ccs)
     = showParen True $
-        showString "mu " .
-        showString ell .
-        showString " @ " .
+        showString muSym .
+        showString nm .
+        showString bulletSym .
         showsPrec 0 ccs
 
 showSum p ccss  = showI p " + " ccss
@@ -338,6 +329,13 @@ alpha _                  =  S.empty
 
 \subsubsection{CSP Printing}
 
+CSP Symbols:
+\begin{code}
+thenSym  =  " \x2192 "
+ndcSym   =  " \x2a05 "
+extCSym  =  " \x25a1 "
+\end{code}
+
 \begin{code}
 instance Show CSP where
 
@@ -349,7 +347,7 @@ instance Show CSP where
   showsPrec p (CSPpfx pfx csp)
     = showParen (p > pPfx) $
         showString pfx .
-        showString " \x2192 " .
+        showString thenSym .
         showsPrec pPfx csp
 
   showsPrec p (IntC p1 p2) = showsInfix p pInt pInt' showIntC [p1,p2]
@@ -376,18 +374,18 @@ instance Show CSP where
         showRenFun s2s .
         showString "]"
 
-  showsPrec p (CSPvar ell) = showString ell
+  showsPrec p (CSPvar v) = showString v
 
-  showsPrec p (CSPmu ell csp)
+  showsPrec p (CSPmu nm csp)
     = showParen True $
-        showString "mu " .
-        showString ell .
-        showString " @ " .
+        showString muSym .
+        showString nm .
+        showString bulletSym .
         showsPrec 0 csp
 
-showIntC p csps  = showI p " \x2a05 " csps
+showIntC p csps  = showI p ndcSym csps
 
-showExtC p csps  = showI p " \x25a1 " csps
+showExtC p csps  = showI p extCSym csps
 
 -- || is \x2225 in unicode  ||| is \x2af4
 showPar0 p csps  = showI p " ||| " csps
@@ -427,6 +425,12 @@ endo ((a1,a2):as) a
 \end{code}
 
 \subsubsection{CCS/CSP Printing}
+
+Common Symbols:
+\begin{code}
+muSym      =  "\x03bc "
+bulletSym  =  " \x2022 "
+\end{code}
 
 \begin{code}
 showsInfix p pI pI' showI [] = showsPrec p Zero
@@ -468,4 +472,20 @@ showRenFun (ee:ees)
 showEE (e1,e2) = showString e1 .
                  showString "/" .
                  showString e2
+\end{code}
+
+Precedences:
+\begin{code}
+-- Comm+Conc, p44
+-- tightest: {CCSren,Rstr}, CCSpfx, Seq, Comp, Ext, Sum :loosest
+pSum  =    2;  pSum'  = pSum+1
+pInt  =    2;  pInt'  = pInt+1
+pExt  =    4;  pExt'  = pSum+1
+pComp =    6;  pComp' = pComp+1
+pPar  =    6;  pPar'  = pPar+1
+pSeq  =    8;  pSeq'  = pPfx+1
+pPfx  =   10;  pPfx'  = pPfx+1
+pRen  =   12;  pRen'  = pRen+1
+pRstr = pRen;  pRstr' = pRstr+1
+pHide = pRen;  pHide' = pHide+1
 \end{code}
