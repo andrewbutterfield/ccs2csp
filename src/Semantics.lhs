@@ -1,6 +1,6 @@
 \section{Semantics}
 \begin{verbatim}
-Copyright  Andrew Buttefield (c) 2020
+Copyright  Andrew Buttefield (c) 2020-21
 
 LICENSE: BSD3, see file LICENSE at ccs2csp root
 \end{verbatim}
