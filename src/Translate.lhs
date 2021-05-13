@@ -20,11 +20,7 @@ dbg msg x = trace (msg++show x) x
 pdbg nm x = Translate.dbg ("\n@"++nm++":\n") x
 \end{code}
 
-This section is based mainly on
-(a fairly recent version of)
-the document ``From CCS to CSP'', by G. Ekembe N.,
-in file \texttt{CCStoCSPgstar\_}$\langle$version$\rangle$\texttt{.pdf}
-hereinafter [GEN].
+This section is based mainly on [GEN].
 
 \subsection{Pre-Indexing}
 
@@ -60,7 +56,7 @@ iFrom i ccs = (ccs,i)
 
 iPfx :: Int -> CCS_Pfx -> (CCS_Pfx, Int)
 iPfx i T = (T,i)
-iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2) 
+iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2)
 -- c2ix(t[a|a-bar]) = t[a12|a12-bar]
 iPfx i (Lbl e) = (Lbl (iLbl i e), i+1)
 
