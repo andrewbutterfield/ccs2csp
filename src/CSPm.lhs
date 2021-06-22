@@ -1,4 +1,4 @@
-\section{Generating CSPm}
+genProcs\section{Generating CSPm}
 \begin{verbatim}
 Copyright  Andrew Buttefield (c) 2020-21
 
@@ -27,17 +27,37 @@ as accepted by FDR4.
 
 \begin{code}
 generateCSPm :: CSP -> String
-generateCSPm = unlines . genCSPm
+generateCSPm csp
+ = unlines $ assemble (genDecls [] csp) (genProcs [] csp)
 
-genCSPm :: CSP -> [String]
-genCSPm = outputCSPm . gatherCSPm
+genDecls :: [String] -> CSP -> [String]
+genDecls slced Stop = slced
+genDecls slced Skip = slced
+genDecls slced (CSPpfx evt csp) = genDecls (("channel "++evt):slced) csp
+genDecls slced (Seq csp1 csp2) = ("NYfI":slced)
+genDecls slced (IntC csp1 csp2) = ("NYfI":slced)
+genDecls slced (ExtC csp1 csp2) = ("NYfI":slced)
+genDecls slced (Par evts csp1 csp2) = ("NYfI":slced)
+genDecls slced (Hide evts csp) = ("NYfI":slced)
+genDecls slced (CSPren rename csp) = ("NYfI":slced)
+genDecls slced (CSPvar v) = slced
+genDecls slced (CSPmu x csp) = ("NYfI":slced)
 
+genProcs :: [String] -> CSP -> [String]
+genProcs scorp Stop = ("STOP":scorp)
+genProcs scorp Skip = ("SKIP":scorp)
+genProcs scorp (CSPpfx pfx csp) = genProcs ((pfx ++ " -> "):scorp) csp
+genProcs scorp (Seq csp1 csp2) = ("NYfI":scorp)
+genProcs scorp (IntC csp1 csp2) = ("NYfI":scorp)
+genProcs scorp (ExtC csp1 csp2) = ("NYfI":scorp)
+genProcs scorp (Par evts csp1 csp2) = ("NYfI":scorp)
+genProcs scorp (Hide evts csp) = ("NYfI":scorp)
+genProcs scorp (CSPren rename csp) = ("NYfI":scorp)
+genProcs scorp (CSPvar v) = ("NYfI":scorp)
+genProcs scorp (CSPmu x csp) = ("NYfI":scorp)
 
-type CSPmDecls = ()
+assemble slced scorp  =  assemble' (reverse scorp) ("":slced)
 
-gatherCSPm :: CSP -> (CSPmDecls, CSP)
-gatherCSPm csp = ((),csp)
-
-outputCSPm :: (CSPmDecls, CSP) -> [String]
-outputCSPm (_,csp) = ["CSPm N.Y.I."]
+assemble' cspm [] = cspm
+assemble' cspm (decl:slced) = assemble' (decl:cspm) slced
 \end{code}
