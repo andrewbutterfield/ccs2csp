@@ -16,6 +16,7 @@ import qualified Data.Map as M
 import Syntax
 import Translate
 import Semantics
+import CSPm
 
 --import Debug.Trace
 --dbg msg x = trace (msg++show x) x
