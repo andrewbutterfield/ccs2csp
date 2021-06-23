@@ -1,5 +1,9 @@
+-- Declarations:
 channel a
+channel b
 
+-- Process:
 P =
-a ->
-STOP
+  a ->
+    b ->
+      SKIP
