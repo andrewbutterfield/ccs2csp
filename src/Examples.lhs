@@ -214,3 +214,18 @@ ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
 \end{code}
 Of interest here, is if our translation of $P\hide H$ as defined above
 is equivalent to translating $P$ to CSP, and then doing the hiding.
+
+
+\subsection{CSP Examples}
+
+These examples are mainly to check the CSPm rendering.
+
+\begin{code}
+demoCSPm :: CSP -> IO ()
+demoCSPm csp = putStrLn $ generateCSPm "MAIN" csp
+\end{code}
+
+Examples:
+\begin{code}
+aThenBStar = CSPpfx "a" $ CSPmu "P" $ CSPpfx "b" $ CSPvar "P"
+\end{code}
