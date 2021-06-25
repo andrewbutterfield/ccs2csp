@@ -6,8 +6,10 @@ LICENSE: BSD3, see file LICENSE at ccs2csp root
 \end{verbatim}
 \begin{code}
 module Examples where
+import Prelude hiding ( (<>) )
 
 import Control.Monad
+import System.IO
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
@@ -220,12 +222,47 @@ is equivalent to translating $P$ to CSP, and then doing the hiding.
 
 These examples are mainly to check the CSPm rendering.
 
+
+Examples:
+\begin{code}
+aThenBStar           =  pfx "a" $ CSPmu "P" $ pfx "b" $ CSPvar "P"
+aThenBonBwithBthenC  =  par ["b"] (pfxs ["a","b"] Skip) (pfxs ["b","c"] Skip)
+doExtThenInt         =  (pfx "a" Skip <> pfx "b" Skip)
+                        $>
+                        (pfx "c" Skip |~| pfx "d" Stop)
+\end{code}
+
+
+\subsection{Demonstrations and End-to-End translation}
+
 \begin{code}
 demoCSPm :: CSP -> IO ()
 demoCSPm csp = putStrLn $ generateCSPm "MAIN" csp
 \end{code}
 
-Examples:
 \begin{code}
-aThenBStar = CSPpfx "a" $ CSPmu "P" $ CSPpfx "b" $ CSPvar "P"
+demoCCS2CSPm :: CCS -> IO ()
+demoCCS2CSPm ccs = putStrLn $ generateCSPm "FROM_CCS" $ t2csp S.empty ccs
+\end{code}
+
+
+\begin{code}
+ccs2csp :: String -> CCS -> IO ()
+ccs2csp fname ccs
+  = let ccs_show = show ccs
+        csp = t2csp S.empty ccs
+        csp_show = show csp
+        cspm = generateCSPm "FROM_CCS" csp
+    in do putStrLn ccs_show
+          putStrLn csp_show
+          putStrLn cspm
+          h <- if null fname then return stdout else openFile fname WriteMode
+          hPutStrLn h "{-"
+          hPutStrLn h ("  CCS: " ++ ccs_show)
+          hPutStrLn h ""
+          hPutStrLn h ("  CSP:" ++ csp_show)
+          hPutStrLn h "-}"
+          hPutStrLn h ""
+          hPutStrLn h cspm
+          if null fname then return () else hClose h
 \end{code}

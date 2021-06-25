@@ -320,6 +320,16 @@ data CSP
   | CSPvar String
   | CSPmu String CSP
   deriving (Eq,Ord,Read)
+
+(|~|)  =  IntC
+(<>)   =  ExtC -- Can't use [], or '[' or ']' in any way
+($>)   =  Seq  -- Can't use ; in any way
+($\)   =  Hide -- Can't use \ by itself
+par              =  Par  . S.fromList
+hide             =  Hide . S.fromList
+pfx a csp        =  CSPpfx a csp
+pfxs [] csp      =  csp
+pfxs (a:as) csp  =  pfx a $ pfxs as csp
 \end{code}
 
 
