@@ -253,16 +253,19 @@ ccs2csp fname ccs
         csp = t2csp S.empty ccs
         csp_show = show csp
         cspm = generateCSPm "FROM_CCS" csp
-    in do putStrLn ccs_show
-          putStrLn csp_show
-          putStrLn cspm
-          h <- if null fname then return stdout else openFile fname WriteMode
-          hPutStrLn h "{-"
-          hPutStrLn h ("  CCS: " ++ ccs_show)
-          hPutStrLn h ""
-          hPutStrLn h ("  CSP:" ++ csp_show)
-          hPutStrLn h "-}"
-          hPutStrLn h ""
-          hPutStrLn h cspm
-          if null fname then return () else hClose h
+    in if null fname
+         then do putStrLn ccs_show
+                 putStrLn csp_show
+                 putStrLn cspm
+         else do h <- openFile fname WriteMode
+                 hPutStrLn h "{-"
+                 hPutStrLn h ("  CCS: " ++ ccs_show)
+                 hPutStrLn h ""
+                 hPutStrLn h ("  CSP:" ++ csp_show)
+                 hPutStrLn h "-}"
+                 hPutStrLn h ""
+                 hPutStrLn h cspm
+                 hClose h
+                 putStrLn ("CSPm written to "++fname++" for following CSP:")
+                 putStrLn ("  "++csp_show)
 \end{code}
