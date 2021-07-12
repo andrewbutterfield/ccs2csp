@@ -1,0 +1,6 @@
+Other material used:
+
+CAAL from Aalborg  (https://github.com/caal/caal)
+   ccs2csp/CAAL
+   ccs2csp/CAAL/LICENSE
+   ccs2csp/CAAL/src/ccs/ccs_grammar.pegjs  -- Javascript grammar for CCS

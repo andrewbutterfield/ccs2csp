@@ -3,6 +3,13 @@
 Haskell coding of CCS to CSP translation ideas being developed
 by Gerard Ekembe Ngondi.
 
+## Acknowledgements
+
+CCS parser derived from grammar file obtained from Aalborg
+<https://github.com/caal/caal>.
+
+See `OTHERS`
+
 ## Installation
 
 ### Prerequisites
@@ -24,7 +31,7 @@ See <https://docs.haskellstack.org/en/stable/README/>. You are strongly advised 
 4. For now, the easiest thing to do is to load up the examples module in the GHC interpreter (`ghci`) and experiment in there. It needs to be invoked as follows:  
 ```
 stack ghci src/Examples.lhs
-``` 
+```
 
 5. The browse command `:browse` will list all defined objects with their types. Any object `obj :: CCS` can be translated (at least in principle). Entering the name of a CCS object at the interpreter prompt will show a pretty-printed version of it.
 
