@@ -11,6 +11,26 @@ import Prelude (String)
 import qualified Prelude as C (Eq, Ord, Show, Read)
 import qualified Data.String
 
+data Program = TopLevel [Statement]
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
+data Statement
+    = SetDeclaration Identifier [Label] | Assignment Identifier Process
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
+data Process
+    = Summation Process Process
+    | Composition Process Process
+    | Prefix Action Process
+    | RestrictEnum Process [Label]
+    | RestrictIdent Process Identifier
+    | Rename Process [Relabel]
+    | Zero
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
+data Relabel = ToFrom Label Label
+  deriving (C.Eq, C.Ord, C.Show, C.Read)
+
 data Action = Output Label | Input Label
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 

@@ -13,63 +13,73 @@
     start
     	= Program
 -}
+entrypoints Program, Process ;
 
-{- ---------- THING ----------
+{- ---------- Program ----------
     //A program consists of lines only used for process assignments.
     Program
     	= statements:Statements _ { return g; }
     	/ _ { return g; }
 -}
+TopLevel. Program ::= [Statement] ;
 
-{- ---------- THING ----------
+{- ---------- Statements ----------
     Statements = Statement Statements
     		   / Statement
 -}
+terminator Statement ";" ;
 
-{- ---------- THING ----------
+{- ---------- Statements ----------
     Statement = Assignment
     		  / SetDeclaration
--}
 
-{- ---------- THING ----------
+   ---------- SetDeclaration (Statement) ----------
     SetDeclaration = _ "set" _ name:Identifier _ "=" _ "{" _ labels:LabelList _ "}" _ ";" { return g.defineNamedSet(name, new ccs.LabelSet(labels || [])); }
 -}
+SetDeclaration. Statement ::= "set" Identifier "=" "{" [Label] "}" ;
 
-{- ---------- THING ----------
+{- ---------- Assignment (Statement) ----------
     Assignment
     	= (_ "agent" Whitespace)? _ name:Identifier _ "=" _ P:Process _ ";" { return g.newNamedProcess(name, P); }
+-}
+Assignment. Statement ::= "agent" Identifier "=" Process ;
 
+{- ---------- Processes ----------
     //The rules here are defined in the reverse order of their precedence.
     //Either a given rule applies, eg. +, and everything to the left must have higher precedence,
     // or there is no plus, in which cases it must still have higher predence.
     Process = Summation
--}
 
-{- ---------- THING ----------
     Summation
     	= P:Composition _ "+" _ Q:Summation { return Q instanceof ccs.SummationProcess ? g.newSummationProcess([P].concat(Q.subProcesses)) : g.newSummationProcess([P, Q]); }
     	/ P:Composition { return P; }
 -}
+Summation. Process ::= Process1 "+" Process1 ;
 
-{- ---------- THING ----------
+{- ---------- Composition (Process1) ----------
     Composition
     	= P:ActionPrefix _ "|" _ Q:Composition { return Q instanceof ccs.CompositionProcess ? g.newCompositionProcess([P].concat(Q.subProcesses)) : g.newCompositionProcess([P, Q]); }
     	/ P:ActionPrefix { return P; }
 -}
+Composition. Process1 ::= Process2 "|" Process2 ;
 
-{- ---------- THING ----------
+{- ---------- ActionPrefix (Process2) ----------
     ActionPrefix
     	= action:Action _ "." _ P:ActionPrefix { return g.newActionPrefixProcess(action, P); }
     	/ P:ReProcess { return P; }
 -}
+Prefix. Process2 ::=  Action "." Process3 ;
 
-{- ---------- THING ----------
+{- ---------- ReProcess (Process3) ----------
     ReProcess
     	= P:ParenProcess _ "\\" _ "{" _ labels:LabelList? _ "}" { return g.newRestrictedProcess(P, new ccs.LabelSet(labels || [])); }
     	/ P:ParenProcess _ "\\" _ setName:Identifier { return g.newRestrictedProcessOnSetName(P, setName); }
     	/ P:ParenProcess _ "[" _ relabels:RelabellingList _ "]" { return g.newRelabelingProcess(P, new ccs.RelabellingSet(relabels || [])); }
     	/ P:ParenProcess { return P; }
 -}
+RestrictEnum.  Process3 ::= Process4 "\\\\" "{" [Label] "}" ;
+RestrictIdent. Process3 ::= Process4 "\\\\" Identifier ;
+Rename.        Process3 ::= Process4 "[" [Relabel] "]" ;
 
 {- ---------- THING ----------
     // Relabellings  [a/b, c/d]
@@ -77,23 +87,27 @@
     	= first:Relabel _ "," _ rest:RelabellingList { return [first].concat(rest); }
     	/ relabel:Relabel { return [relabel]; }
 -}
+separator Relabel "," ;
 
-{- ---------- THING ----------
+{- ---------- Relabel ----------
     Relabel
     	= to:Label _ "/" _ from:Label { return {to: to, from: from}; }
 -}
+ToFrom. Relabel ::= Label "/" Label ;
 
-{- ---------- THING ----------
+{- ---------- ParenProcess (Process) ----------
     ParenProcess
     	= "(" _ P:Process _ ")" { return P; }
     	/ P:ConstantProcess { return P; }
 -}
+_. Process4 ::= "(" Process ")" ;
 
-{- ---------- THING ----------
+{- ---------- ConstantProcess (Process4) ----------
     ConstantProcess
     	= "0" { return g.getNullProcess(); }
     	/ K:Identifier { return g.referToNamedProcess(K); }
 -}
+Zero. Process4 ::= "0" ;
 
 {- ---------- Identifier ----------
     Identifier "identifier"
@@ -102,7 +116,6 @@
     	= rest:[A-Za-z0-9?!_'\-#^]*  { return rest; }
 -}
 token Identifier (upper (letter|digit|["?!_'\\-#^"])*) ;
-
 
 {- ---------- Action ----------
     Action "action"
@@ -122,10 +135,13 @@ token Label (lower (letter|digit|["?!_'\\-#^"])*) ;
     LabelList
     	= first:Label rest:(_ "," _ Label)* { return extractLabelList(first, rest); }
 -}
+separator Label "," ;
 
-{- ---------- THING ----------
+{- ---------- Whitespace ----------
     Whitespace "whitespace"
     	= [ \t]
+
+    -- handled by BNFC automatically.
 -}
 
 {- ---------- Comments ----------
@@ -134,15 +150,12 @@ token Label (lower (letter|digit|["?!_'\\-#^"])*) ;
 
 comment "*" ;
 
-{-
+{- ---------- THING ----------
     //Useful utility
     _ = (Whitespace / Newline)* Comment _
       / (Whitespace / Newline)*
 
     Newline "newline"
     	= "\r\n" / "\n" / "\r"
-
--}
-
-{- ---------- THING ----------
+  -- handled by BNFC automatically.
 -}
