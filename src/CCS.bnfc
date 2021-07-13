@@ -54,14 +54,15 @@ Assignment. Statement ::= "agent" Identifier "=" Process ;
     	= P:Composition _ "+" _ Q:Summation { return Q instanceof ccs.SummationProcess ? g.newSummationProcess([P].concat(Q.subProcesses)) : g.newSummationProcess([P, Q]); }
     	/ P:Composition { return P; }
 -}
-Summation. Process ::= Process1 "+" Process1 ;
+Summation. Process ::= Process "+" Process1 ;
+
 
 {- ---------- Composition (Process1) ----------
     Composition
     	= P:ActionPrefix _ "|" _ Q:Composition { return Q instanceof ccs.CompositionProcess ? g.newCompositionProcess([P].concat(Q.subProcesses)) : g.newCompositionProcess([P, Q]); }
     	/ P:ActionPrefix { return P; }
 -}
-Composition. Process1 ::= Process2 "|" Process2 ;
+Composition. Process1 ::= Process1 "|" Process2 ;
 
 {- ---------- ActionPrefix (Process2) ----------
     ActionPrefix
@@ -77,8 +78,8 @@ Prefix. Process2 ::=  Action "." Process3 ;
     	/ P:ParenProcess _ "[" _ relabels:RelabellingList _ "]" { return g.newRelabelingProcess(P, new ccs.RelabellingSet(relabels || [])); }
     	/ P:ParenProcess { return P; }
 -}
-RestrictEnum.  Process3 ::= Process4 "\\\\" "{" [Label] "}" ;
-RestrictIdent. Process3 ::= Process4 "\\\\" Identifier ;
+RestrictEnum.  Process3 ::= Process4 "\\" "{" [Label] "}" ;
+RestrictIdent. Process3 ::= Process4 "\\" Identifier ;
 Rename.        Process3 ::= Process4 "[" [Relabel] "]" ;
 
 {- ---------- THING ----------
@@ -99,8 +100,9 @@ ToFrom. Relabel ::= Label "/" Label ;
     ParenProcess
     	= "(" _ P:Process _ ")" { return P; }
     	/ P:ConstantProcess { return P; }
+
 -}
-_. Process4 ::= "(" Process ")" ;
+coercions Process 4 ;
 
 {- ---------- ConstantProcess (Process4) ----------
     ConstantProcess
@@ -108,6 +110,7 @@ _. Process4 ::= "(" Process ")" ;
     	/ K:Identifier { return g.referToNamedProcess(K); }
 -}
 Zero. Process4 ::= "0" ;
+NamedProcess. Process4 ::= Identifier ;
 
 {- ---------- Identifier ----------
     Identifier "identifier"
