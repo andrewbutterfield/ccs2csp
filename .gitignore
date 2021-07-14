@@ -20,6 +20,7 @@ src/LexCCS.x
 src/Makefile
 src/ParCCS.hi
 src/ParCCS.y
+src/ParCCS.info
 src/PrintCCS.hi
 src/PrintCCS.hs
 src/SkelCCS.hi
