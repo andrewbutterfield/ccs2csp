@@ -20,9 +20,14 @@ library
                      , Semantics
                      , Translate
                      , CSPm
+                     , CCSm
                      , Control
+                     , AbsCCS
+                     , LexCCS
+                     , ParCCS
   build-depends:       base >= 4.7 && < 5
                      , containers
+                     , array
                      , HUnit
                      -- , QuickCheck
                      , test-framework

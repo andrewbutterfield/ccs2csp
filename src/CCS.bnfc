@@ -109,8 +109,8 @@ coercions Process 4 ;
     	= "0" { return g.getNullProcess(); }
     	/ K:Identifier { return g.referToNamedProcess(K); }
 -}
-Zero. Process4 ::= "0" ;
-NamedProcess. Process4 ::= Identifier ;
+Null. Process4 ::= "0" ;
+Named. Process4 ::= Identifier ;
 
 {- ---------- Identifier ----------
     Identifier "identifier"

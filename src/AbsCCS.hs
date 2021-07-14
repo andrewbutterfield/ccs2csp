@@ -25,8 +25,8 @@ data Process
     | RestrictEnum Process [Label]
     | RestrictIdent Process Identifier
     | Rename Process [Relabel]
-    | Zero
-    | NamedProcess Identifier
+    | Null
+    | Named Identifier
   deriving (C.Eq, C.Ord, C.Show, C.Read)
 
 data Relabel = ToFrom Label Label

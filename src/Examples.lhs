@@ -19,6 +19,7 @@ import Syntax
 import Translate
 import Semantics
 import CSPm
+import CCSm
 
 --import Debug.Trace
 --dbg msg x = trace (msg++show x) x
@@ -268,4 +269,12 @@ ccs2csp fname ccs
                  hClose h
                  putStrLn ("CSPm written to "++fname++" for following CSP:")
                  putStrLn ("  "++csp_show)
+\end{code}
+
+\begin{code}
+ccsM2cspM :: String -> IO ()
+ccsM2cspM txt
+  = case programParser txt of
+      Left err  ->  putStrLn err
+      Right prog -> putStrLn $ show prog
 \end{code}
