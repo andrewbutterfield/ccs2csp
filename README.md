@@ -27,6 +27,19 @@ See <https://docs.haskellstack.org/en/stable/README/>. You are strongly advised 
 
 3. Give command `stack install` and wait. The first time you run this might take a while as it may install a local version of the Haskell compiler and required libraries. When it is done it will have installed a program called `ccs2csp`.
 
+To regenerate the BNFC modules, you need to have BNFC installed (digitalgrammars.com) and execute the following:
+
+```
+cd src
+bnfc -m CCS.bnfc
+make
+```
+
+All generated files except `AbsCCS.hs`, `LexCCS.hs` and `ParCCS.hs` can be removed.
+
+In general this should not be required as the latest versions of the above three are kept in the repo. It is only if you modify `CCS.bnfc` for some reason that you need to do the above steps.
+
+### Using
 
 4. For now, the easiest thing to do is to load up the examples module in the GHC interpreter (`ghci`) and experiment in there. It needs to be invoked as follows:  
 ```
