@@ -1,0 +1,34 @@
+*
+* testfile for CCS.bnfc - CCS machine-readable syntax (via Aalborg)
+*
+
+* Defining Sets
+
+set S = {} ;
+set T = { a } ;
+set U={a,b};
+set V = { a', b?42 } ;
+
+* Defining agents (a.k.a. "Processes")
+
+* Simple cases
+
+agent Z = 0 ;
+agent S = 0 + 0 ;
+agent C = 0 | 0 ;
+agent P = a.0 ;
+agent P' = 'a . 0 ;
+agent RL = 0 \ {} ;
+agent RS = 0 \ V ;
+agent RN = 0 [] ;
+
+* Complex cases
+
+agent PRLAB = P \ { a, b };
+agent QRSU  = Q \ U ;
+agent PRNAB = P [b/a] ;
+agent COMM  = a.0 | 'a.0 ;
+agent HCOMM = (a.0 | 'a.0) \ {a} ;
+agent MIXUP = ((P + b.0 | 'a. Q) \ { d}) [x/a, y/b] ;
+
+agent REC = a.REC ;
