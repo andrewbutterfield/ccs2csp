@@ -346,6 +346,12 @@ t2csp iCtxt ccs = tl $ c4star iCtxt ccs
 \end{code}
 
 
+Top-level translation:
+\begin{code}
+ccs2csp :: CCS -> CSP
+ccs2csp = t2csp S.empty
+\end{code}
+
 % \newpage
 % \subsection{Old Stuff}
 %

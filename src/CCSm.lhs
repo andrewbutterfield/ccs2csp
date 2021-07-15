@@ -1,4 +1,4 @@
-genProc\section{Loading CCS}
+\section{Loading CCS}
 \begin{verbatim}
 Copyright  Andrew Buttefield (c) 2020-21
 

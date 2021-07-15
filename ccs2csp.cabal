@@ -1,13 +1,13 @@
 name:                ccs2csp
-version:             0.0.1.0
+version:             0.0.1.1
 -- synopsis:
 -- description:
-homepage:            https://github.com/andrewbutterfield/literateStack#readme
+homepage:            https://github.com/andrewbutterfield/ccs2csp
 license:             BSD3
 license-file:        LICENSE
 author:              Andrew Butterfield
 maintainer:          Andrew.Butterfield@scss.tcd.ie
-copyright:           (c) 2020 Andrew Butterfield
+copyright:           (c) 2020-21 Andrew Butterfield
 category:            Template
 build-type:          Simple
 extra-source-files:  README.md

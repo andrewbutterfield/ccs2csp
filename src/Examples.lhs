@@ -2,7 +2,7 @@
 \begin{verbatim}
 Copyright  Andrew Buttefield (c) 2020-21
 
-LICENSE: BSD3, see file LICENSE at ccs2csp root
+LICENSE: BSD3, see file LICENSE at demoCCS2CSP root
 \end{verbatim}
 \begin{code}
 module Examples where
@@ -248,8 +248,8 @@ demoCCS2CSPm ccs = putStrLn $ generateCSPm "FROM_CCS" $ t2csp S.empty ccs
 
 
 \begin{code}
-ccs2csp :: String -> CCS -> IO ()
-ccs2csp fname ccs
+fileDemoCCS2CSP :: String -> CCS -> IO ()
+fileDemoCCS2CSP fname ccs
   = let ccs_show = show ccs
         csp = t2csp S.empty ccs
         csp_show = show csp
