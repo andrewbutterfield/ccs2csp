@@ -1,0 +1,5 @@
+*
+* testfile for CCS.bnfc - CCS machine-readable syntax (via Aalborg)
+*
+
+((P + b.0 | 'a. Q) \ { d}) [x/a, y/b] 
