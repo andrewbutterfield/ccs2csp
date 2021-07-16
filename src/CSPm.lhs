@@ -129,6 +129,8 @@ prec _             =  42 -- whatever!
 
 \subsection{Generate Process}
 
+For now, we ignore precedences and simply use parentheses liberally.
+
 \begin{code}
 genProc :: Int -> Int -> [String] -> CSP -> [String]
 genProc p i crp Stop = (ind i "STOP":crp)
@@ -144,8 +146,25 @@ genProc p i crp (Par evts csp1 csp2)
  where
    parevts = "[| {"++levts++"} |]"
    levts = concat $ intersperse "," $ S.toList evts
-genProc p i crp (Hide evts csp) = ("Hide-NYfI":crp)
-genProc p i crp (CSPren rename csp) = ("CSPren-NYfI":crp)
+
+-- P \ A
+genProc p i crp (Hide evts csp)
+ = let crp1 = genProc p (i+1) (ind i "(":crp) csp
+       crp2 = ind i ")"  : crp1
+       crp3 = ind i "\\" : crp2
+   in ind i ("{"++levts++"}") : crp3
+ where
+   levts = concat $ intersperse "," $ S.toList evts
+
+-- P[[from <- to]]
+genProc p i crp (CSPren rename csp)
+ = let crp1 = genProc p (i+1) (ind i "(":crp) csp
+       crp2 = ind i ")"  : crp1
+   in ind i ("[["++rpairs++"]]") : crp2
+ where
+   genRen (from,to) = from ++ " <- " ++ to
+   rpairs = concat $ intersperse "," $ map genRen rename
+
 genProc p i crp (CSPmu x csp) = (ind i x:crp)
 
 genInfix p i crp csp1 opstr csp2

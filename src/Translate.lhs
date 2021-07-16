@@ -332,7 +332,8 @@ tl (Comp ccs1 ccs2) =  Par sync csp1 csp2
         alf1  =  alpha csp1 -- S.map show $ alpha csp1
         alf2  =  alpha csp2 -- S.map show $ alpha csp2
         sync  =  alf1 `S.intersection` alf2
-tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Skip
+tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Stop
+tl (CCSren rpairs ccs)    =  CSPren rpairs $ tl ccs
 \end{code}
 
 

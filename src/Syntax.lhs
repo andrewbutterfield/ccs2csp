@@ -104,7 +104,7 @@ pfxbar pfx      =  pfx
 \end{code}
 
 \begin{code}
-type RenPairs = [(String,String)]
+type RenPairs = [(String,String)] -- (from,to)
 \end{code}
 
 For CCS we have the syntax%
