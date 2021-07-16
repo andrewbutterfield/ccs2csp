@@ -41,7 +41,24 @@ In general this should not be required as the latest versions of the above three
 
 ### Using
 
-4. For now, the easiest thing to do is to load up the examples module in the GHC interpreter (`ghci`) and experiment in there. It needs to be invoked as follows:  
+The full CCS syntax supporting `set` and `agent` definitions is not supported right now.
+At the moment all that is supported is reading a single process definition.
+
+
+Once the program is built, go into tests directory.
+
+Running `ccs2csp` brings up a prompt for a filename-root.
+
+If you enter `mytest` (say), then the program will read a single CCS process
+from `mytest.proc`, and then generate a CSP file `mytest.csp` where the translated process is called `MYTEST`.
+
+There are a collection of proc-files already present.
+
+
+
+#### Old style usage
+
+4. Load up the examples module in the GHC interpreter (`ghci`) and experiment in there. It needs to be invoked as follows:  
 ```
 stack ghci src/Examples.lhs
 ```
