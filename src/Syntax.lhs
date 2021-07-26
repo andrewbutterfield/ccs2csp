@@ -101,6 +101,11 @@ instance Show CCS_Pfx where
 pfxbar :: CCS_Pfx -> CCS_Pfx
 pfxbar (Lbl e)  =  Lbl $ ixlbar e
 pfxbar pfx      =  pfx
+
+lbl2tau :: CCS_Pfx -> CCS_Pfx
+lbl2tau (Lbl (Std s,i))  =  T' s i
+lbl2tau (Lbl (Bar s,i))  =  T' s i
+lbl2tau pfx              =  pfx
 \end{code}
 
 \begin{code}
@@ -147,7 +152,7 @@ data CCS -- and CCStau
   | CCStauPar CCS CCS             -- CCStau
   | CCStauHide (Set CCS_Pfx) CCS  -- CCStau
   deriving (Eq,Ord,Read)
-type CCStau = CCS
+type CCSTau = CCS
 \end{code}
 
 \subsubsection{CCS Renaming}
@@ -223,7 +228,7 @@ instance Show CCS where
    | S.null pfxs  =  showsPrec p ccs
    | otherwise    = showParen (p > pRstr) $
                       showsPrec pRstr' ccs .
-                      showString "\\T" .
+                      showString " \\T " .
                       showSet show (S.toList pfxs)
 
   showsPrec p (CCSren s2s ccs)

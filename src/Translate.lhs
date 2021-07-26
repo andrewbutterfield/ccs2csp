@@ -20,19 +20,56 @@ dbg msg x = trace (msg++show x) x
 pdbg nm x = Translate.dbg ("\n@"++nm++":\n") x
 \end{code}
 
-This section is based mainly on [GEN].
+Translation workflow:
+$$
+\framebox{CCS}
+\stackrel{c2ccs\tau}{\rightarrow}
+\framebox{CCSTau}
+\stackrel{ix}{\rightarrow}
+\stackrel{g^*}{\rightarrow}
+\stackrel{conm}{\rightarrow}
+\framebox{CCSTau}
+\stackrel{tl}{\rightarrow}
+\framebox{CSP}
+\stackrel{\hide\{tau,a_{ij}\}}{\rightarrow}
+\stackrel{ai2a}{\rightarrow}
+\framebox{CSP}
+$$
+
+\subsection{CCS to CCSTau}
+
+\begin{eqnarray*}
+   c2ccs\tau(P|Q)
+   &\defeq&
+   (c2ccs\tau(P) ~|_T~ c2ccs\tau(Q))
+   \hide_T
+   \{\tau[a|\bar a] \mid a \in \Alf P, \bar a \in \Alf Q\}
+\\ c2ccs\tau(F(P_1,\dots,P_n))
+   &\defeq&
+   F(c2ccs\tau(P_1),\dots,c2ccs\tau(P_n))
+\\ && F \mbox{ covers } 0, X, \restrict, \alpha., \mu X., +
+\end{eqnarray*}
+\begin{code}
+c2ccsT :: CCS -> CCSTau
+c2ccsT (Comp ccs1 ccs2)
+  = visibleTaus `CCStauHide` (ccs1 `CCStauPar` ccs2)
+  where
+    alf1 = alf ccs1
+    alf2 = alf ccs2
+    commonAlf = alf1 `S.intersection` (S.map pfxbar alf2)
+    visibleTaus = S.map lbl2tau commonAlf
+c2ccsT ccs = ccs
+\end{code}
 
 \subsection{Pre-Indexing}
 
 Here we attach single indices to every standard or barred event,
 numbered from 0 upwards.
 Currently we fail if tagged-taus are found.
-
-This is called $c2ix$ in [GEN]
 \begin{code}
-c2ix = indexNames
+ix = indexNames
 
-indexNames :: CCS -> CCS
+indexNames :: CCSTau -> CCSTau
 indexNames = fst . iFrom 1
 
 
@@ -57,7 +94,7 @@ iFrom i ccs = (ccs,i)
 iPfx :: Int -> CCS_Pfx -> (CCS_Pfx, Int)
 iPfx i T = (T,i)
 iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2)
--- c2ix(t[a|a-bar]) = t[a12|a12-bar]
+-- ix(t[a|a-bar]) = t[a12|a12-bar]
 iPfx i (Lbl e) = (Lbl (iLbl i e), i+1)
 
 iLbl :: Int -> IxLab -> IxLab
@@ -250,16 +287,16 @@ gsp0 = gsp S.empty
 
 
 \begin{eqnarray*}
-   c4star(S,P) &\defeq& g^*(S,c2ix(P))
+   c4star(S,P) &\defeq& g^*(S,ix(P))
 \\ c2star(S,P)
    &\defeq&
-   c4star(S,P)\restrict \{g\pi_2(S,a_i)\mid a_i \in \Alf c2ix(P)\}
+   c4star(S,P)\restrict \{g\pi_2(S,a_i)\mid a_i \in \Alf ix(P)\}
 \end{eqnarray*}
 \begin{code}
-c4star iCtxt ccs = gsp iCtxt $ c2ix ccs
+c4star iCtxt ccs = gsp iCtxt $ ix ccs
 c2star iCtxt ccs
  = let
-     ccsi = c2ix ccs
+     ccsi = ix ccs
      ccsa = getCCSLbls ccsi
      res = S.unions $ S.map (gsa2 iCtxt) ccsa
    in Rstr res $ gsp iCtxt ccsi
