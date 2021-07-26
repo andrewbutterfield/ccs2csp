@@ -63,33 +63,35 @@ c2ccsT ccs = ccs
 
 \subsection{Pre-Indexing}
 
-Here we attach single indices to every standard or barred event,
-numbered from 0 upwards.
-Currently we fail if tagged-taus are found.
+We implement $ix$ by simply passing around a number that is incremented
+every time an index is generated.
 \begin{code}
-ix = indexNames
+ix :: CCSTau -> CCSTau
+ix = fst . ixFrom 1
+\end{code}
 
-indexNames :: CCSTau -> CCSTau
-indexNames = fst . iFrom 1
-
-
-iFrom i (CCSpfx pfx ccs) = (CCSpfx pfx' ccs',i'')
+\begin{code}
+ixFrom i (CCSpfx pfx ccs) = (CCSpfx pfx' ccs',i'')
   where
     (pfx',i') = iPfx i pfx
-    (ccs',i'') = iFrom i' ccs
-iFrom i (Sum p1 p2) = (Sum p1' p2',i')
-  where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
-iFrom i (Comp p1 p2) = (Comp p1' p2',i')
-  where ([p1',p2'],i') = paramileave iFrom i [p1,p2]
-iFrom i (Rstr es ccs) = (Rstr es' ccs',i')
+    (ccs',i'') = ixFrom i' ccs
+ixFrom i (Sum p1 p2) = (Sum p1' p2',i')
+  where ([p1',p2'],i') = paramileave ixFrom i [p1,p2]
+ixFrom i (CCStauPar p1 p2) = (CCStauPar p1' p2',i')
+  where ([p1',p2'],i') = paramileave ixFrom i [p1,p2]
+ixFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
-    (ccs',i') = iFrom i ccs
-    es' = S.map getlbl $ S.filter (cameFrom es) $ alf ccs'
-iFrom i (CCSren pfn ccs) = (CCSren pfn ccs',i')
-  where (ccs',i') = iFrom i ccs
-iFrom i (CCSmu nm ccs) = (CCSmu nm ccs',i')
-  where (ccs',i') = iFrom i ccs
-iFrom i ccs = (ccs,i)
+    (ccs',i') = ixFrom i ccs
+    es' = S.map getlbl $ S.filter (cameFromIxLab es) $ alf ccs'
+ixFrom i (CCStauHide pfxs ccs) = (CCStauHide pfxs' ccs',i')
+  where
+    (ccs',i') = ixFrom i ccs
+    pfxs' = S.filter (cameFromPfx pfxs) $ alf ccs'
+ixFrom i (CCSren pfn ccs) = (CCSren pfn ccs',i')
+  where (ccs',i') = ixFrom i ccs
+ixFrom i (CCSmu nm ccs) = (CCSmu nm ccs',i')
+  where (ccs',i') = ixFrom i ccs
+ixFrom i ccs = (ccs,i)
 
 iPfx :: Int -> CCS_Pfx -> (CCS_Pfx, Int)
 iPfx i T = (T,i)
@@ -100,9 +102,12 @@ iPfx i (Lbl e) = (Lbl (iLbl i e), i+1)
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
 
-cameFrom :: (Set IxLab) -> CCS_Pfx -> Bool
-cameFrom es (Lbl e)  =  (root . fst) e `S.member` S.map (root . fst) es
-cameFrom _  _        =  False
+cameFromIxLab :: (Set IxLab) -> CCS_Pfx -> Bool
+cameFromIxLab es (Lbl e)  =  (root . fst) e `S.member` S.map (root . fst) es
+cameFromIxLab _  _        =  False
+
+cameFromPfx :: (Set CCS_Pfx) -> CCS_Pfx -> Bool
+cameFromPfx pfxs pfx  =  cameFromIxLab (S.map getlbl $ S.filter isLbl pfxs) pfx
 
 getlbl :: CCS_Pfx -> IxLab
 getlbl (Lbl lbl)  =  lbl
