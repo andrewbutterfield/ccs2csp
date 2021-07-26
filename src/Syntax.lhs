@@ -122,9 +122,20 @@ to avoid confusion with $\hide$, which denotes CSP's hide operator.
              \mid X
              \mid \mu X \bullet P
 \end{eqnarray*}
-
+For CCS$\tau$ we have the syntax:
+\begin{eqnarray*}
+  P,Q &::=&  0
+             \mid \alpha.P
+             \mid P+Q
+             \mid P\restrict L
+             \mid P[f]
+             \mid X
+             \mid \mu X \bullet P
+             \mid P|_T Q
+             \mid P \hide_T \alpha
+\end{eqnarray*}
 \begin{code}
-data CCS
+data CCS -- and CCStau
   = Zero
   | CCSpfx CCS_Pfx CCS
   | Sum CCS CCS
@@ -133,7 +144,10 @@ data CCS
   | CCSren RenPairs CCS
   | CCSvar String
   | CCSmu String CCS
+  | CCStauPar CCS CCS             -- CCStau
+  | CCStauHide (Set CCS_Pfx) CCS  -- CCStau
   deriving (Eq,Ord,Read)
+type CCStau = CCS
 \end{code}
 
 \subsubsection{CCS Renaming}
@@ -153,13 +167,15 @@ renameIxL s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
 
 \begin{code}
 alf :: CCS -> Set CCS_Pfx
-alf (CCSpfx pfx ccs)  =  S.singleton pfx `S.union` alf ccs
-alf (Sum p1 p2)       =  alf p1 `S.union` alf p2
-alf (Comp p1 p2)      =  alf p1 `S.union` alf p2
-alf (Rstr es ccs)     =  alf ccs S.\\ S.map Lbl es
-alf (CCSren s2s ccs)  =  S.map (renamePfx s2s) $ alf ccs
-alf (CCSmu s ccs)     =  alf ccs
-alf _                 =  S.empty
+alf (CCSpfx pfx ccs)       =  S.singleton pfx `S.union` alf ccs
+alf (Sum p1 p2)            =  alf p1 `S.union` alf p2
+alf (Comp p1 p2)           =  alf p1 `S.union` alf p2
+alf (Rstr es ccs)          =  alf ccs S.\\ S.map Lbl es
+alf (CCSren s2s ccs)       =  S.map (renamePfx s2s) $ alf ccs
+alf (CCSmu s ccs)          =  alf ccs
+alf (CCStauPar p1 p2)      =  alf p1 `S.union` alf p2
+alf (CCStauHide pfxs ccs)  =  alf ccs S.\\ pfxs
+alf _                      =  S.empty
 
 alfPfx (Lbl evt)  =  S.singleton evt
 alfPfx _          =  S.empty
@@ -194,12 +210,21 @@ instance Show CCS where
 
   showsPrec p (Comp p1 p2) = showsInfix p pComp pComp' showComp [p1,p2]
 
+  showsPrec p (CCStauPar p1 p2) = showsInfix p pComp pComp' showParTau [p1,p2]
+
   showsPrec p (Rstr es ccs)
    | S.null es  =  showsPrec p ccs
    | otherwise  = showParen (p > pRstr) $
                     showsPrec pRstr' ccs .
                     showString restrictSym .
                     showSet showIxLab (S.toList es)
+
+  showsPrec p (CCStauHide pfxs ccs)
+   | S.null pfxs  =  showsPrec p ccs
+   | otherwise    = showParen (p > pRstr) $
+                      showsPrec pRstr' ccs .
+                      showString "\\T" .
+                      showSet show (S.toList pfxs)
 
   showsPrec p (CCSren s2s ccs)
     = showParen (p > pRen) $
@@ -220,6 +245,8 @@ instance Show CCS where
 showSum p ccss  = showI p " + " ccss
 
 showComp p ccss  = showI p " | " ccss
+
+showParTau p ccss  = showI p " |T " ccss
 \end{code}
 
 
@@ -247,13 +274,15 @@ rstr es ccs = Rstr (S.fromList es) ccs
 
 \begin{code}
 prefixesOf :: CCS -> Set CCS_Pfx
-prefixesOf (CCSpfx pfx ccs)   =  S.singleton pfx `S.union` prefixesOf ccs
-prefixesOf (Sum p1 p2)     =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Comp p1 p2)   =  prefixesOf p1 `S.union` prefixesOf p2
-prefixesOf (Rstr ss ccs)   =  prefixesOf ccs
-prefixesOf (CCSren s2s ccs)   =  prefixesOf $ doRename (endo s2s) ccs
-prefixesOf (CCSmu s ccs)     =  prefixesOf ccs
-prefixesOf _               =  S.empty
+prefixesOf (CCSpfx pfx ccs)     =  S.singleton pfx `S.union` prefixesOf ccs
+prefixesOf (Sum p1 p2)          =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Comp p1 p2)         =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (Rstr ss ccs)        =  prefixesOf ccs
+prefixesOf (CCSren s2s ccs)     =  prefixesOf $ doRename (endo s2s) ccs
+prefixesOf (CCSmu s ccs)        =  prefixesOf ccs
+prefixesOf (CCStauPar p1 p2)    =  prefixesOf p1 `S.union` prefixesOf p2
+prefixesOf (CCStauHide ss ccs)  =  prefixesOf ccs
+prefixesOf _                    =  S.empty
 \end{code}
 
 \subsubsection{CCS Actions}
@@ -262,11 +291,15 @@ prefixesOf _               =  S.empty
 \begin{code}
 doRename :: (String -> String) -> CCS -> CCS
 doRename s2s (CCSpfx pfx ccs)   =  CCSpfx (renPfx s2s pfx) $ doRename s2s ccs
-doRename s2s (Sum p1 p2)      =  Sum (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Comp p1 p2)  =  Comp (doRename s2s p1) (doRename s2s p2)
-doRename s2s (Rstr es ccs)   =  Rstr (S.map (renIxLab s2s) es) $ doRename s2s ccs
+doRename s2s (Sum p1 p2)        =  Sum (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Comp p1 p2)       =  Comp (doRename s2s p1) (doRename s2s p2)
+doRename s2s (Rstr es ccs)
+  =  Rstr (S.map (renIxLab s2s) es) $ doRename s2s ccs
 doRename s2s (CCSren s2s' ccs)  =  doRename s2s (doRename (endo s2s') ccs)
-doRename s2s (CCSmu s ccs)     =  CCSmu s $ doRename s2s ccs
+doRename s2s (CCSmu s ccs)      =  CCSmu s $ doRename s2s ccs
+doRename s2s (CCStauPar p1 p2)  =  CCStauPar (doRename s2s p1) (doRename s2s p2)
+doRename s2s (CCStauHide pfxs ccs)
+  =  CCStauHide (S.map (renPfx s2s) pfxs) $ doRename s2s ccs
 doRename _   ccs             = ccs
 
 renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
