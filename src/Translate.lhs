@@ -61,6 +61,7 @@ c2ccsT (Comp ccs1 ccs2)
 c2ccsT ccs = ccs
 \end{code}
 
+\newpage
 \subsection{Pre-Indexing}
 
 We implement $ix$ by simply passing around a number that is incremented
@@ -70,29 +71,68 @@ ix :: CCSTau -> CCSTau
 ix = fst . ixFrom 1
 \end{code}
 
+$$
+ix(\tau.P) = \tau.ix(P)
+\qquad
+ix(a.P) = a_i.ix_{-i}(P)
+$$
 \begin{code}
 ixFrom i (CCSpfx pfx ccs) = (CCSpfx pfx' ccs',i'')
   where
     (pfx',i') = iPfx i pfx
     (ccs',i'') = ixFrom i' ccs
+\end{code}
+
+$$ ix(P+Q) = ix_1(P) + ix_2(Q) $$
+\begin{code}
 ixFrom i (Sum p1 p2) = (Sum p1' p2',i')
   where ([p1',p2'],i') = paramileave ixFrom i [p1,p2]
+\end{code}
+
+$$ ix(P ~|_T~ Q) = ix_1(P) ~|_T~  ix_2(Q) $$
+\begin{code}
 ixFrom i (CCStauPar p1 p2) = (CCStauPar p1' p2',i')
   where ([p1',p2'],i') = paramileave ixFrom i [p1,p2]
+\end{code}
+
+$$ ix(P\restrict \{a\}) = ix(P) \restrict \{ a_i \mid a_i \in \Alf ix(P)\} $$
+\begin{code}
 ixFrom i (Rstr es ccs) = (Rstr es' ccs',i')
   where
     (ccs',i') = ixFrom i ccs
     es' = S.map getlbl $ S.filter (cameFromIxLab es) $ alf ccs'
+\end{code}
+
+$$
+ix(P\hide_T \{a\}) = ix(P) \hide_T \{ a_i \mid a_i \in \Alf ix(P)\}
+\qquad
+ix(P\hide_T \{\tau[a|\bar a]\} = ix(P))
+$$
+\begin{code}
 ixFrom i (CCStauHide pfxs ccs) = (CCStauHide pfxs' ccs',i')
   where
     (ccs',i') = ixFrom i ccs
     pfxs' = S.filter (cameFromPfx pfxs) $ alf ccs'
-ixFrom i (CCSren pfn ccs) = (CCSren pfn ccs',i')
-  where (ccs',i') = ixFrom i ccs
+\end{code}
+
+$$ ix(P[f]) = ix(f(P)) $$
+\begin{code}
+ixFrom i (CCSren pfn ccs) = ixFrom i (doRename (endo pfn) ccs)
+\end{code}
+
+$$ ix(\mu X \bullet P) = \mu X \bullet ix(P) $$
+\begin{code}
 ixFrom i (CCSmu nm ccs) = (CCSmu nm ccs',i')
   where (ccs',i') = ixFrom i ccs
-ixFrom i ccs = (ccs,i)
+\end{code}
 
+The rest are unchanged.
+\begin{code}
+ixFrom i ccs = (ccs,i)
+\end{code}
+
+Helper functions for $ix$ :
+\begin{code}
 iPfx :: Int -> CCS_Pfx -> (CCS_Pfx, Int)
 iPfx i T = (T,i)
 iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2)
@@ -101,7 +141,10 @@ iPfx i (Lbl e) = (Lbl (iLbl i e), i+1)
 
 iLbl :: Int -> IxLab -> IxLab
 iLbl i (nm,_) = (nm,One i)
+\end{code}
 
+Here we implement $a_i \in \Alf ix(P)$ for $a$ in restricted or hidden set.
+\begin{code}
 cameFromIxLab :: (Set IxLab) -> CCS_Pfx -> Bool
 cameFromIxLab es (Lbl e)  =  (root . fst) e `S.member` S.map (root . fst) es
 cameFromIxLab _  _        =  False
@@ -112,6 +155,7 @@ cameFromPfx pfxs pfx  =  cameFromIxLab (S.map getlbl $ S.filter isLbl pfxs) pfx
 getlbl :: CCS_Pfx -> IxLab
 getlbl (Lbl lbl)  =  lbl
 \end{code}
+
 
 Given a CCS term, return a mapping from events
 to the set of indices associated with each event.
