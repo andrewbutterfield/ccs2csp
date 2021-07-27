@@ -185,8 +185,6 @@ insMapping nm i imap
 \newpage
 \subsection{Using $g^*$ for Actions}
 
-Defs. 4.2, 4.1 and end of 4.3, in [GEN].
-
 \begin{eqnarray*}
    g\pi_2 &:& \Set(Act \times \Nat)\times (Act \times \Nat)
               \fun
@@ -251,7 +249,6 @@ gs iCtxt = iCtxt `S.union` (S.unions (S.map (gsa2 iCtxt) iCtxt))
 \newpage
 \subsection{Using $g^*$ for Processes}
 
-Def 4.3, pp19--20 [GEN].
 
 We have a well-formedness criteria for restriction,
 in order for $g^*$ to work properly.
@@ -353,7 +350,6 @@ c2star iCtxt ccs
 
 \subsection{Translate toward CSP}
 
-Working from [GEN v19 Note5, Note6, Note6\_Update, Note7]
 
 \begin{eqnarray*}
    conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}

@@ -48,7 +48,7 @@ From [CC],p46
         {A \trans\alpha P'} \; Con
 \end{mathpar}
 
-From [GEN], in the CCS-$\tau$ variant,
+In the CCS-$\tau$ variant,
 we replace $Com_3$ with
 \[
   \infer{E \trans\ell E' \\ F \trans{\overline\ell} F'}
