@@ -339,36 +339,41 @@ gsp0 = gsp S.empty
 \end{code}
 
 \newpage
-\subsection{Pre-Translation}
-
-
-\begin{eqnarray*}
-   c4star(S,P) &\defeq& g^*(S,ix(P))
-\\ c2star(S,P)
-   &\defeq&
-   c4star(S,P)\restrict \{g\pi_2(S,a_i)\mid a_i \in \Alf ix(P)\}
-\end{eqnarray*}
-\begin{code}
-c4star iCtxt ccs = gsp iCtxt $ ix ccs
-c2star iCtxt ccs
- = let
-     ccsi = ix ccs
-     ccsa = getCCSLbls ccsi
-     res = S.unions $ S.map (gsa2 iCtxt) ccsa
-   in Rstr res $ gsp iCtxt ccsi
-\end{code}
 
 \subsection{Translate toward CSP}
 
-
+We first modify some CCS prefixes to appear more like
+their eventual CSP forms.
 \begin{eqnarray*}
-   conm &\defeq& \{ \tau\mapsto\tau, a\mapsto a, \bar a \mapsto a\}
+   conm
+   &\defeq&
+   \{ \tau\mapsto\tau
+    , a_i\mapsto a_
+    , \bar a_i \mapsto \bar a_i
+    , a_{ij} \mapsto a_{ij}
+    , \bar a_{ij} \mapsto a_{ij}
+    , \tau[a_{ij}|\bar a_{ij}] \mapsto a_ij
+   \}
 \end{eqnarray*}
-
-We partially implement this as a prefix transform $tlp$:
+Note
+that only $\tau[a_{ij}|\bar a_{ij}]$ and $\bar a_{ij}$ prefixes are altered,
+in each case to $a_{ij}$.
 \begin{code}
-tlp :: IxLab -> CSP_Pfx
-tlp ix        =  tll ix
+conm :: CCS_Pfx -> CCS_Pfx
+conm (Lbl (Bar nm,ix@(Two _ _)))  =  Lbl (Std nm,ix)
+conm (T' nm ix)                   =  Lbl (Std nm,ix)
+conm ccs_pfx                      =  ccs_pfx
+\end{code}
+There are no more explicit $\tau[\dots]$ prefixes.
+We invoke $conm$ here from within $tl$ as we do the translation,
+and the following code deals with the indexed-labels.
+\begin{code}
+tlprefix :: CCS_Pfx ->  CSP_Pfx
+tlprefix = tlp . conm
+tlp T = "tau"
+tlp (Lbl ixlbl) = tlix ixlbl
+tlix :: IxLab -> CSP_Pfx
+tlix ix       =  tll ix
 tll (nm,ix)   =  tln nm++tli ix
 tln (Std nm)  =  nm
 tln (Bar nm)  =  nm
@@ -377,15 +382,16 @@ tli (One i)   =  "_"++show i
 tli (Two i j) =  "_"++show i++"_"++show j
 \end{code}
 
-
+Now, the move to CSP.
 \begin{eqnarray*}
    tl(0)               &\defeq& STOP
-\\ tl(\tau.P)          &\defeq& tl(P)
-\\ tl(a.P)             &\defeq& tlp(a) \then tl(P)
-\\ tl(P_1+P_2)         &\defeq& (tl(P_1) \Box tl(P_2))
-                                \sqcap
-                                \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
-\\ tl(P |_{ccs\tau} Q) &\defeq& tl(P) \parallel_{\Alf tl(P)\cap{\Alf tl(Q)}} tl(Q)
+\\ tl(\tau.P)          &\defeq& tau \then tl(P)
+\\ tl(a.P)             &\defeq& tlix(a) \then tl(P)
+\\ tl(P+Q)             &\defeq& (tl(P_1) \Box tl(P_2))
+                                % \sqcap
+                                % \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
+\\ tl(P |_T Q) &\defeq& tl(P) \parallel_{\Alf tl(P)\cap{\Alf tl(Q)}} tl(Q)
+\\ tl(P \hide_T B) &\defeq& tl(P) \hide B
 \\ tl(P\restrict A)    &\defeq& tl(P) \parallel_{tlps(A)} STOP
 \\ tl(X)               &\defeq& X
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
@@ -400,14 +406,13 @@ $
      \{ P' \mid P \trans\tau P' \}
 $.
 
-We implement $conm$ within $tl$ here, by using $tlp$ above,
+We implement $conm$ within $tl$ here, by using $tlix$ above,
 and dealing with the parallel sync and restriction sets explicitly below.
 This covers all the places where labels occurs in CCS.
 \begin{code}
 tl :: CCS -> CSP
-tl Zero                   =  Skip
-tl (CCSpfx (Lbl il) ccs)  =  CSPpfx (tlp il) $ tl ccs
-tl (CCSpfx _ ccs)         =  tl ccs
+tl Zero                   =  Stop
+tl (CCSpfx pfx ccs)       =  CSPpfx (tlprefix pfx) $ tl ccs
 tl (CCSvar pname)         =  CSPvar pname
 tl (Sum ccs1 ccs2)
   | null afters           =  ExtC csp1 csp2
@@ -428,6 +433,25 @@ tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Stop
 tl (CCSren rpairs ccs)    =  CSPren rpairs $ tl ccs
 \end{code}
 
+
+
+
+Unsure about this:
+\begin{eqnarray*}
+   c4star(S,P) &\defeq& g^*(S,ix(P))
+\\ c2star(S,P)
+   &\defeq&
+   c4star(S,P)\restrict \{g\pi_2(S,a_i)\mid a_i \in \Alf ix(P)\}
+\end{eqnarray*}
+\begin{code}
+c4star iCtxt ccs = gsp iCtxt $ ix ccs
+c2star iCtxt ccs
+ = let
+     ccsi = ix ccs
+     ccsa = getCCSLbls ccsi
+     res = S.unions $ S.map (gsa2 iCtxt) ccsa
+   in Rstr res $ gsp iCtxt ccsi
+\end{code}
 
 For $P$ a CCSTau process:
 \begin{eqnarray*}
