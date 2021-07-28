@@ -223,11 +223,12 @@ gsa iCtxt a = S.singleton a `S.union` gsa2 iCtxt a
   g^* &:& \Set(Act \times \Nat)\times \Set(Act \times \Nat)
           \fun
           \Set(Act \times \Nat)
-\\ g^*(S,B) &\defeq& \bigcup\{ g^*(S,a_i) \mid a_i \in B \}
+\\ g^*(S,B) &\defeq& \bigcup\{ g^*(S-\{a_i\},a_i) \mid a_i \in B \}
 \end{eqnarray*}
 \begin{code}
 gsb :: Set IxLab -> Set IxLab -> Set IxLab
-gsb iCtxt ilbls = S.unions $ S.map (gsa iCtxt) ilbls
+gsb iCtxt ilbls = S.unions $ S.map (gsb' iCtxt) ilbls
+gsb' iCtxt lbl = gsa (iCtxt S.\\ S.singleton lbl) lbl
 \end{code}
 
 
@@ -250,25 +251,25 @@ gs iCtxt = iCtxt `S.union` (S.unions (S.map (gsa2 iCtxt) iCtxt))
 \subsection{Using $g^*$ for Processes}
 
 
-We have a well-formedness criteria for restriction,
-in order for $g^*$ to work properly.
-\begin{eqnarray*}
-   wf(P\restrict B)
-   &\defeq&
-   B \subseteq \Alf P
-   \land
-   \forall a_i \in B \bullet \{a_k \mid a_k \in \Alf P\} \subseteq B
-\end{eqnarray*}
-\begin{code}
-wfRes :: CCS -> Bool
-wfRes _ = error "wfRes NYI"
-\end{code}
+% We have a well-formedness criteria for restriction,
+% in order for $g^*$ to work properly.
+% \begin{eqnarray*}
+%    wf(P\restrict B)
+%    &\defeq&
+%    B \subseteq \Alf P
+%    \land
+%    \forall a_i \in B \bullet \{a_k \mid a_k \in \Alf P\} \subseteq B
+% \end{eqnarray*}
+% \begin{code}
+% wfRes :: CCS -> Bool
+% wfRes _ = error "wfRes NYI"
+% \end{code}
 
 Type signature for process $g^*$:
 \begin{eqnarray*}
    g^* &:& \Set(Act \times \Nat)\times CCS
            \fun
-           CCS\\ pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
+           CCS
 \end{eqnarray*}
 \begin{code}
 gsp :: Set IxLab -> CCS -> CCS
@@ -276,7 +277,10 @@ gsp :: Set IxLab -> CCS -> CCS
 
 Pre-condition for process $g^*$:
 \begin{eqnarray*}
-   pre\!-\!g^*(S,P) &\defeq& S \cap \Alf P = \emptyset
+   pre\!-\!g^*(S,P)
+   &\defeq&
+   S \cap \Alf P = \emptyset
+   \mbox{ and $P$ is a result of the application of $ix$.}
 \end{eqnarray*}
 \begin{code}
 pre_gsp iCtxt ccs  =  S.null (iCtxt `S.union` alf ccs)
@@ -287,26 +291,32 @@ Definition of process $g^*$:
    g^*(S,0) &\defeq& 0
 \\ g^*(S,\alpha.P) &\defeq& \Sigma_{b \in g^*(S,\alpha)} b.g^*(S,P)
 \\ g^*(S,P+Q) &\defeq& g^*(S,P) + g^*(S,Q)
-\\ g^*(S,P \mid_{ccs\tau} Q)
-   &\defeq& g^*(S\cup\Alf Q, P) \mid_{ccs\tau} g^*(S\cup\Alf P, Q)
+\\ g^*(S,P \mid_T Q)
+   &\defeq& g^*(S\cup\Alf Q, P) \mid_T g^*(S\cup\Alf P, Q)
 \\ g^*(S,P\restrict B)
    &\defeq&
    g^*(S,P)\restrict g^*(S,B)
+\\ g^*(S, P ~\hide_T~ B)
+   &\defeq&
+   g*(S,P) ~\hide_T~ g^*(S \cup B,B)
    % \cup
    % \{\alpha_{ij}\mid \alpha_i \in B, \bar\alpha_j \in S\}
-\\ g^*(S,P[f]) &\defeq& (g^*(S,P))[f]
+\\ g^*(S,P[f]) &\defeq& (g^*(S,f(P)))
 \\ g^*(S,X) &\defeq& X
 \\ g^*(S,\mu X.P) &\defeq& \mu X . g^*(S,P)
 \end{eqnarray*}
 
 \begin{code}
-gsp _    Zero                   =  Zero
-gsp _    v@(CCSvar _)             =  v
-gsp iCtxt (Sum ccs1 ccs2)       =  csum $ map (gsp iCtxt) [ccs1,ccs2]
-gsp iCtxt (CCSmu x ccs)           =  CCSmu x $ gsp iCtxt ccs
-gsp iCtxt (Rstr lbls ccs)       =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
-gsp iCtxt (CCSren f ccs)           =  CCSren f $ gsp iCtxt ccs
-gsp iCtxt (Comp ccs1 ccs2)  =  cpar $ walk (gpar iCtxt) [ccs1,ccs2]
+gsp _    Zero                      =  Zero
+gsp _    v@(CCSvar _)              =  v
+gsp iCtxt (Sum ccs1 ccs2)          =  csum $ map (gsp iCtxt) [ccs1,ccs2]
+gsp iCtxt (CCSmu x ccs)            =  CCSmu x $ gsp iCtxt ccs
+gsp iCtxt (Rstr lbls ccs)          =  Rstr (gsb iCtxt lbls) (gsp iCtxt ccs)
+gsp iCtxt (CCSren f ccs)           =  gsp iCtxt $ doRename (endo f) ccs
+gsp iCtxt (CCStauHide pfxs ccs)
+  =  CCStauHide (S.map Lbl $ gsb (iCtxt `S.union` b) b) $ gsp iCtxt ccs
+  where b = S.map getlbl $ S.filter isLbl pfxs
+gsp iCtxt (CCStauPar ccs1 ccs2)   =  ctpar $ walk (gpar iCtxt) [ccs1,ccs2]
                                         $ map getCCSLbls [ccs1,ccs2]
 gsp iCtxt (CCSpfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
