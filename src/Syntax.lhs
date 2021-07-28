@@ -258,15 +258,19 @@ showParTau p ccss  = showI p " |T " ccss
 \subsubsection{CCS Smart Builders}
 
 \begin{code}
+cfold :: (CCS -> CCS -> CCS) -> [CCS] -> CCS
+cfold _ [] = Zero
+cfold _ [ccs] = ccs
+cfold op (ccs:ccss) = ccs `op` cfold op ccss
+
 csum :: [CCS] -> CCS
-csum [] = Zero
-csum [ccs] = ccs
-csum (ccs:prcs) = Sum ccs $ csum prcs
+csum = cfold Sum
 
 cpar :: [CCS] -> CCS
-cpar [] = Zero
-cpar [ccs] = ccs
-cpar (ccs:prcs) = Comp ccs $ cpar prcs
+cpar = cfold Comp
+
+ctpar :: [CCSTau] -> CCSTau
+ctpar = cfold CCStauPar
 
 
 rstr :: [IxLab] -> CCS -> CCS
