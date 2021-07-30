@@ -51,6 +51,11 @@ $$
 \end{eqnarray*}
 \begin{code}
 c2ccsT :: CCS -> CCSTau
+c2ccsT (CCSpfx evt ccs)  =  CCSpfx evt $ c2ccsT ccs
+c2ccsT (Sum ccs1 ccs2)   =  Sum (c2ccsT ccs1) (c2ccsT ccs2)
+c2ccsT (Rstr lbls ccs)   =  Rstr lbls $ c2ccsT ccs
+c2ccsT (CCSren rp ccs)   =  CCSren rp $ c2ccsT ccs
+c2ccsT (CCSmu nm ccs)    =  CCSmu nm $  c2ccsT ccs
 c2ccsT (Comp ccs1 ccs2)
   = visibleTaus `CCStauHide` (ccs1 `CCStauPar` ccs2)
   where
@@ -58,7 +63,7 @@ c2ccsT (Comp ccs1 ccs2)
     alf2 = alf ccs2
     commonAlf = alf1 `S.intersection` (S.map pfxbar alf2)
     visibleTaus = S.map lbl2tau commonAlf
-c2ccsT ccs = ccs
+c2ccsT ccs               =  ccs  -- Zero, CCSvar
 \end{code}
 
 \newpage
@@ -321,6 +326,7 @@ gsp iCtxt (CCStauPar ccs1 ccs2)   =  ctpar $ walk (gpar iCtxt) [ccs1,ccs2]
 gsp iCtxt (CCSpfx (Lbl ilbl) ccs)  =  csum $ map (mkpfx (gsp iCtxt ccs))
                                              (S.toList $ gsa iCtxt ilbl)
 gsp iCtxt (CCSpfx pfx ccs)         =  CCSpfx pfx $ gsp iCtxt ccs
+gsp iCtxt (Comp _ _) = error "g*(Comp...) is invalid."
 
 -- helpers
 getCCSLbls = S.map getlbl . S.filter isLbl . alf

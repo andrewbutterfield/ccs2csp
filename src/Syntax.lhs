@@ -29,7 +29,7 @@ data Label = Std String | Bar String deriving (Eq,Ord,Read)
 
 instance Show Label where
   show (Std s)  =  s
-  show (Bar s)  =  s ++ "-bar"
+  show (Bar s)  =  s ++ "_bar"
 
 root :: Label -> String
 root (Std s)  =  s
@@ -51,7 +51,7 @@ data Index
 instance Show Index where
   show None       =  ""
   show (One i)    =  show i
-  show (Two i j)  =  show (One i) ++ ";" ++ show (One j)
+  show (Two i j)  =  show (One i) ++ "_" ++ show (One j)
 \end{code}
 
 Our CCS ``labels'' are indexable.
@@ -93,7 +93,7 @@ isLbl (Lbl _)  =  True
 isLbl _        =  False
 
 instance Show Event where
-  show T                =  "t"
+  show T                =  "tau"
   show (Lbl (Std s,i))  =  s ++ show i
   show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
   show (T' n i)           =  show T ++ show i++"["++n++"|"++n++"-bar]"

@@ -46,7 +46,7 @@ We need to inject the BNFC generated datatypes into ours.
 proc2CCS :: Process -> CCS
 proc2CCS (Summation p1 p2)         =  Sum (proc2CCS p1) (proc2CCS p2)
 proc2CCS (Composition p1 p2)       =  Comp (proc2CCS p1) (proc2CCS p2)
-proc2CCS (Prefix act p)            =  CCSpfx (Lbl $ action2lbl act) (proc2CCS p)
+proc2CCS (Prefix act p)            =  CCSpfx (action2evt act) (proc2CCS p)
 proc2CCS (RestrictEnum p lbls)     =  Rstr (lbls2ixlabs lbls) (proc2CCS p)
 proc2CCS (RestrictIdent p ident) = error ("RestrictIdent needs name->set maps")
 proc2CCS (Rename p relabels)       =  CCSren (rel2rpairs relabels) (proc2CCS p)
@@ -55,8 +55,9 @@ proc2CCS (Named (Identifier str))  =  CCSvar str
 \end{code}
 
 \begin{code}
-action2lbl (Input  (Label ell))  =  (Std ell,None)
-action2lbl (Output (Label ell))  =  (Bar ell,None)
+action2evt (Input  (Label "tau"))  =  T
+action2evt (Input  (Label ell))    =  Lbl (Std ell,None)
+action2evt (Output (Label ell))    =  Lbl (Bar ell,None)
 
 rel2rpairs = map rel2rpair
 rel2rpair (ToFrom (Label to) (Label from)) = (from,to)
