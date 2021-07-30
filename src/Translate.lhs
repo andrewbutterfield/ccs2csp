@@ -370,73 +370,72 @@ and the following code deals with the indexed-labels.
 \begin{code}
 tlprefix :: CCS_Pfx ->  CSP_Pfx
 tlprefix = tlp . conm
-tlp T = "tau"
+
+tauInCSP = "tau"
+
+tlp T = tauInCSP
 tlp (Lbl ixlbl) = tlix ixlbl
+
 tlix :: IxLab -> CSP_Pfx
 tlix ix       =  tll ix
+
 tll (nm,ix)   =  tln nm++tli ix
+
 tln (Std nm)  =  nm
 tln (Bar nm)  =  nm
+
 tli None      =  ""
 tli (One i)   =  "_"++show i
 tli (Two i j) =  "_"++show i++"_"++show j
 \end{code}
 
+\newpage
+\subsubsection{$tl$ --- from CCStau to CSP}
+
 Now, the move to CSP.
+\begin{code}
+tl :: CCSTau -> CSP
+\end{code}
+
 \begin{eqnarray*}
    tl(0)               &\defeq& STOP
 \\ tl(\tau.P)          &\defeq& tau \then tl(P)
 \\ tl(a.P)             &\defeq& tlix(a) \then tl(P)
-\\ tl(P+Q)             &\defeq& (tl(P_1) \Box tl(P_2))
-                                % \sqcap
-                                % \{ tl(\circ\tau(P_1)) \cup tl(\circ\tau(P_2)) \}
-\\ tl(P |_T Q) &\defeq& tl(P) \parallel_{\Alf tl(P)\cap{\Alf tl(Q)}} tl(Q)
-\\ tl(P \hide_T B) &\defeq& tl(P) \hide B
+\\ tl(P+Q)             &\defeq& (tl(P_1) ~\Box~ tl(P_2))
+\\ tl(P \hide_T B)     &\defeq& tl(P) \hide B
 \\ tl(P\restrict A)    &\defeq& tl(P) \parallel_{tlps(A)} STOP
 \\ tl(X)               &\defeq& X
 \\ tl(\mu X \bullet P) &\defeq& \mu X \bullet(tl(P))
+\\ tl(P[f])            &\defeq& tl(f(P))
+\\ tl(P |_T Q)         &\defeq& tl(P) \parallel_{\Alf tl(P)\cap{\Alf tl(Q)}} tl(Q)
 \end{eqnarray*}
-\textbf{Note: }
-We might introduce a ``tau'' event ($tau$) to CSP
-and use $tl(\tau.P)=tau.tl(P)$.
+\begin{code}
+tl Zero                   =  Stop
+tl (CCSpfx pfx ccs)       =  CSPpfx (tlprefix pfx) $ tl ccs
+tl (CCSvar pname)         =  CSPvar pname
+tl (Sum ccs1 ccs2)        =  ExtC (tl ccs1) (tl ccs2)
+tl (CCStauHide pfxs ccs)  =  Hide (S.map tlprefix pfxs) $ tl ccs
+tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Stop
+tl (CCSren rpairs ccs)    =  tl $ doRename (endo rpairs) ccs
+tl (CCStauPar ccs1 ccs2)  =  Par sync csp1 csp2
+  where csp1  =  tl(ccs1)
+        csp2  =  tl(ccs2)
+        alf1  =  alpha csp1 -- S.map show $ alpha csp1
+        alf2  =  alpha csp2 -- S.map show $ alpha csp2
+        sync  =  alf1 `S.intersection` alf2
+\end{code}
 
+
+
+
+\newpage
+Unsure about these:
 For $P$ a CCS process, recall ``after-tau'':
 $
    \circ\tau(P) \defeq
      \{ P' \mid P \trans\tau P' \}
 $.
 
-We implement $conm$ within $tl$ here, by using $tlix$ above,
-and dealing with the parallel sync and restriction sets explicitly below.
-This covers all the places where labels occurs in CCS.
-\begin{code}
-tl :: CCS -> CSP
-tl Zero                   =  Stop
-tl (CCSpfx pfx ccs)       =  CSPpfx (tlprefix pfx) $ tl ccs
-tl (CCSvar pname)         =  CSPvar pname
-tl (Sum ccs1 ccs2)
-  | null afters           =  ExtC csp1 csp2
-  | otherwise             =  IntC (ExtC csp1 csp2) (ndc afters)
-  where csp1 =  tl(ccs1)
-        csp2 =  tl(ccs2)
-        csps1 = map tl (afterTau ccs1)
-        csps2 = map tl (afterTau ccs2)
-        afters = csps1 ++ csps2
-        ndc = foldl1 IntC
-tl (Comp ccs1 ccs2) =  Par sync csp1 csp2
-  where csp1  =  tl(ccs1)
-        csp2  =  tl(ccs2)
-        alf1  =  alpha csp1 -- S.map show $ alpha csp1
-        alf2  =  alpha csp2 -- S.map show $ alpha csp2
-        sync  =  alf1 `S.intersection` alf2
-tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Stop
-tl (CCSren rpairs ccs)    =  CSPren rpairs $ tl ccs
-\end{code}
-
-
-
-
-Unsure about this:
 \begin{eqnarray*}
    c4star(S,P) &\defeq& g^*(S,ix(P))
 \\ c2star(S,P)
