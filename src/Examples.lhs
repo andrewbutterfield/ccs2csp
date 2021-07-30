@@ -58,14 +58,21 @@ to generate a list of same, paired with meaningful names.
 \begin{code}
 genExample :: CCS ->  [(String,Proc)]
 genExample ccs
- = zip ["ccs  "    , "c2ix "   , "g*0  "   , "cs4  "   , "tlp  "   , "t2csp" ]
-       [ CCS ccs   , CCS ccsi  , CCS ccsg  , CCS ccs4  , CSP tlp   , CSP csp ]
+ = [ ("ccs  ", CCS ccs)
+   , ("ccsT ", CCS ccstau)
+   , ("ccsTi", CCS ccsi)
+   , ("g*0  ", CCS ccsg)
+   , ("tlp  ", CSP csp)
+   , ("tlh  ", CSP tlh)
+   , ("csp  ", CSP csp)
+   ]
  where
-   ccsi = indexNames ccs
+   ccstau = c2ccsT ccs
+   ccsi = ix ccstau
    ccsg = gsp0 ccsi
-   ccs4 = c4star S.empty ccs
-   tlp  = tl ccs4
-   csp = t2csp S.empty ccs
+   tlp  = tl ccsg
+   tlh = t2csp ccstau
+   csp = ccs2csp ccs
 \end{code}
 
 We use \texttt{runExample} to display that list
@@ -90,6 +97,7 @@ runExample  =  putStrLn . showExample . genExample
 na = Std "a" ; ea = (na,None);  a = Lbl ea ; abar = pfxbar a
 nb = Std "b" ; eb = (nb,None);  b = Lbl eb ; bbar = pfxbar b
 nc = Std "c" ; ec = (nc,None);  c = Lbl ec ; cbar = pfxbar c
+nd = Std "d" ; ed = (nd,None);  d = Lbl ed ; dbar = pfxbar d
 a0 = CCSpfx a Zero; abar0 = CCSpfx abar Zero
 b0 = CCSpfx b Zero; bbar0 = CCSpfx bbar Zero
 c0 = CCSpfx c Zero; cbar0 = CCSpfx cbar Zero
@@ -226,11 +234,11 @@ These examples are mainly to check the CSPm rendering.
 
 Examples:
 \begin{code}
-aThenBStar           =  pfx "a" $ CSPmu "P" $ pfx "b" $ CSPvar "P"
-aThenBonBwithBthenC  =  par ["b"] (pfxs ["a","b"] Skip) (pfxs ["b","c"] Skip)
-doExtThenInt         =  (pfx "a" Skip <> pfx "b" Skip)
+aThenBStar           =  pfx a $ CSPmu "P" $ pfx b $ CSPvar "P"
+aThenBonBwithBthenC  =  par [b] (pfxs [a,b] Skip) (pfxs [b,c] Skip)
+doExtThenInt         =  (pfx a Skip <> pfx b Skip)
                         $>
-                        (pfx "c" Skip |~| pfx "d" Stop)
+                        (pfx c Skip |~| pfx d Stop)
 \end{code}
 
 
@@ -243,7 +251,7 @@ demoCSPm csp = putStrLn $ generateCSPm "MAIN" csp
 
 \begin{code}
 demoCCS2CSPm :: CCS -> IO ()
-demoCCS2CSPm ccs = putStrLn $ generateCSPm "FROM_CCS" $ t2csp S.empty ccs
+demoCCS2CSPm ccs = putStrLn $ generateCSPm "FROM_CCS" $ ccs2csp ccs
 \end{code}
 
 
@@ -251,7 +259,7 @@ demoCCS2CSPm ccs = putStrLn $ generateCSPm "FROM_CCS" $ t2csp S.empty ccs
 fileDemoCCS2CSP :: String -> CCS -> IO ()
 fileDemoCCS2CSP fname ccs
   = let ccs_show = show ccs
-        csp = t2csp S.empty ccs
+        csp = ccs2csp ccs
         csp_show = show csp
         cspm = generateCSPm "FROM_CCS" csp
     in if null fname

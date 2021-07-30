@@ -82,27 +82,27 @@ or a (possibly indexed) label ($\ell$,$\bar\ell$).
 For CCSTau, we also add (possibly indexed) visible synchronisations
 ($\tau[a|\bar a]$).
 \begin{code}
-data CCS_Pfx
+data Event
   = T                 -- CSS tau
   | Lbl IxLab         -- CCS a or a-bar
   | T' String Index   -- CCStau  t[a|a-bar]
   deriving (Eq,Ord,Read)
 
-isLbl :: CCS_Pfx -> Bool
+isLbl :: Event -> Bool
 isLbl (Lbl _)  =  True
 isLbl _        =  False
 
-instance Show CCS_Pfx where
+instance Show Event where
   show T                =  "t"
   show (Lbl (Std s,i))  =  s ++ show i
   show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
   show (T' n i)           =  show T ++ show i++"["++n++"|"++n++"-bar]"
 
-pfxbar :: CCS_Pfx -> CCS_Pfx
+pfxbar :: Event -> Event
 pfxbar (Lbl e)  =  Lbl $ ixlbar e
 pfxbar pfx      =  pfx
 
-lbl2tau :: CCS_Pfx -> CCS_Pfx
+lbl2tau :: Event -> Event
 lbl2tau (Lbl (Std s,i))  =  T' s i
 lbl2tau (Lbl (Bar s,i))  =  T' s i
 lbl2tau pfx              =  pfx
@@ -142,7 +142,7 @@ For CCS$\tau$ we have the syntax:
 \begin{code}
 data CCS -- and CCStau
   = Zero
-  | CCSpfx CCS_Pfx CCS
+  | CCSpfx Event CCS
   | Sum CCS CCS
   | Comp CCS CCS
   | Rstr (Set IxLab) CCS
@@ -150,7 +150,7 @@ data CCS -- and CCStau
   | CCSvar String
   | CCSmu String CCS
   | CCStauPar CCS CCS             -- CCStau
-  | CCStauHide (Set CCS_Pfx) CCS  -- CCStau
+  | CCStauHide (Set Event) CCS  -- CCStau
   deriving (Eq,Ord,Read)
 type CCSTau = CCS
 \end{code}
@@ -158,10 +158,10 @@ type CCSTau = CCS
 \subsubsection{CCS Renaming}
 
 \begin{code}
-renamePfx :: RenPairs -> CCS_Pfx -> CCS_Pfx
-renamePfx _   T          =  T
-renamePfx s2s (T' s i)     =  T' (renameStr s s2s) i
-renamePfx s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
+renameEvt :: RenPairs -> Event -> Event
+renameEvt _   T          =  T
+renameEvt s2s (T' s i)     =  T' (renameStr s s2s) i
+renameEvt s2s (Lbl ell)  =  Lbl $ renameIxL s2s ell
 
 renameIxL :: RenPairs -> IxLab -> IxLab
 renameIxL s2s ((Std s),i)  =  ((Std $ renameStr s s2s),i)
@@ -171,12 +171,12 @@ renameIxL s2s ((Bar s),i)  =  ((Bar $ renameStr s s2s),i)
 \subsubsection{CCS Alphabets}
 
 \begin{code}
-alf :: CCS -> Set CCS_Pfx
+alf :: CCS -> Set Event
 alf (CCSpfx pfx ccs)       =  S.singleton pfx `S.union` alf ccs
 alf (Sum p1 p2)            =  alf p1 `S.union` alf p2
 alf (Comp p1 p2)           =  alf p1 `S.union` alf p2
 alf (Rstr es ccs)          =  alf ccs S.\\ S.map Lbl es
-alf (CCSren s2s ccs)       =  S.map (renamePfx s2s) $ alf ccs
+alf (CCSren s2s ccs)       =  S.map (renameEvt s2s) $ alf ccs
 alf (CCSmu s ccs)          =  alf ccs
 alf (CCStauPar p1 p2)      =  alf p1 `S.union` alf p2
 alf (CCStauHide pfxs ccs)  =  alf ccs S.\\ pfxs
@@ -282,7 +282,7 @@ rstr es ccs = Rstr (S.fromList es) ccs
 \subsubsection{CCS Queries}
 
 \begin{code}
-prefixesOf :: CCS -> Set CCS_Pfx
+prefixesOf :: CCS -> Set Event
 prefixesOf (CCSpfx pfx ccs)     =  S.singleton pfx `S.union` prefixesOf ccs
 prefixesOf (Sum p1 p2)          =  prefixesOf p1 `S.union` prefixesOf p2
 prefixesOf (Comp p1 p2)         =  prefixesOf p1 `S.union` prefixesOf p2
@@ -311,7 +311,7 @@ doRename s2s (CCStauHide pfxs ccs)
   =  CCStauHide (S.map (renPfx s2s) pfxs) $ doRename s2s ccs
 doRename _   ccs             = ccs
 
-renPfx :: (String -> String) -> CCS_Pfx -> CCS_Pfx
+renPfx :: (String -> String) -> Event -> Event
 renPfx _ T            =  T
 renPfx s2s (T' s i)     =  T' (s2s s) i
 renPfx s2s (Lbl ell)  =  Lbl $ renIxLab s2s ell
@@ -329,10 +329,6 @@ renName s2s (Bar ell)  =  Bar $ s2s ell
 
 \subsubsection{CSP Syntax}
 
-For CSP, we simply consider events as uninterpreted strings:
-\begin{code}
-type CSP_Pfx = String
-\end{code}
 
 For CSP we have the syntax:
 \begin{eqnarray*}
@@ -352,12 +348,12 @@ For CSP we have the syntax:
 data CSP
   = Stop
   | Skip
-  | CSPpfx CSP_Pfx CSP
+  | CSPpfx Event CSP
   | Seq CSP CSP
   | IntC CSP CSP
   | ExtC CSP CSP
-  | Par (Set String) CSP CSP
-  | Hide (Set String) CSP
+  | Par (Set Event) CSP CSP
+  | Hide (Set Event) CSP
   | CSPren RenPairs CSP
   | CSPvar String
   | CSPmu String CSP
@@ -378,14 +374,14 @@ pfxs (a:as) csp  =  pfx a $ pfxs as csp
 \subsubsection{CSP Alphabets}
 
 \begin{code}
-alpha :: CSP -> Set CSP_Pfx
+alpha :: CSP -> Set Event
 alpha (CSPpfx pfx csp)   =  S.singleton pfx `S.union` alpha csp
 alpha (Seq csp1 csp2)    =  alpha csp1 `S.union` alpha csp2
 alpha (IntC csp1 csp2)   =  alpha csp1 `S.union` alpha csp2
 alpha (ExtC csp1 csp2)   =  alpha csp1 `S.union` alpha csp2
 alpha (Par _ csp1 csp2)  =  alpha csp1 `S.union` alpha csp2
 alpha (Hide _ csp)       =  alpha csp
-alpha (CSPren s2s csp)   =  S.map (flip renameStr s2s) $ alpha csp
+alpha (CSPren s2s csp)   =  S.map (renameEvt s2s) $ alpha csp
 alpha (CSPmu _ csp)      =  alpha csp
 alpha _                  =  S.empty
 \end{code}
@@ -413,10 +409,10 @@ instance Show CSP where
 
   showsPrec p Skip  = showString "Skip"
 
-  showsPrec p (CSPpfx pfx Stop) = showString pfx
+  showsPrec p (CSPpfx pfx Stop) = showString $ show pfx
   showsPrec p (CSPpfx pfx csp)
     = showParen (p > pPfx) $
-        showString pfx .
+        showString (show pfx) .
         showString thenSym .
         showsPrec pPfx csp
 
@@ -435,7 +431,7 @@ instance Show CSP where
    | otherwise  = showParen (p > pRstr) $
                     showsPrec pRstr' ccs .
                     showString "\\" .
-                    showSet id (S.toList es)
+                    showSet show (S.toList es)
 
   showsPrec p (CSPren s2s csp)
     = showParen (p > pRen) $
@@ -459,9 +455,9 @@ showExtC p csps  = showI p extCSym csps
 
 -- || is \x2225 in unicode  ||| is \x2af4
 showPar0 p csps  = showI p " ||| " csps
-showPar nms p csps  = showI p (" |"++showNms nms++"| ") csps
+showPar nms p csps  = showI p (" |"++showEvt nms++"| ") csps
 
-showNms nms = concat $ intersperse "," $ S.toList nms
+showEvt nms = concat $ intersperse "," $ map show $ S.toList nms
 
 showSeq p csps = showI p " ; " csps
 \end{code}

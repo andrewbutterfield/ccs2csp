@@ -34,7 +34,7 @@ We generate reversed lists of strings using tail-recursive code.
 generateCSPm :: String -> CSP -> String
 generateCSPm name csp
  = let
-     lcd = map ("channel "++) $ filter (not . null) $ nub $ chDecls [] csp  -- in reverse order
+     lcd = map (("channel "++) . show) $ nub $ chDecls [] csp  -- in reverse order
      rpn = nmdProcs [(name,csp)] csp -- in order
      crp = genProcesses lcd rpn -- in reverse order
    in unlines (banner : "" : reverse crp)
@@ -49,7 +49,7 @@ genProcesses crp ((nm,proc):procs)
 \subsection{Generate Channel Declarations}
 
 \begin{code}
-chDecls :: [String] -> CSP -> [String]
+chDecls :: [Event] -> CSP -> [Event]
 chDecls lcd (CSPpfx evt csp)  =  chDecls (evt:lcd) csp
 chDecls lcd (Seq csp1 csp2)   =  chDecls (chDecls lcd csp1) csp2
 chDecls lcd (IntC csp1 csp2)  =  chDecls (chDecls lcd csp1) csp2
@@ -61,10 +61,12 @@ chDecls lcd (Par evts csp1 csp2)
 chDecls lcd (CSPmu x csp)     =  chDecls lcd csp
 chDecls lcd _                 =  lcd
 
+genEvts :: [Event] -> [Event] -> [Event]
 genEvts lcd [] = lcd
 genEvts lcd (evt:evts) = genEvts (evt:lcd) evts
 
-genRNEvts lcd = genEvts lcd . map snd
+genRNEvts :: [Event] -> RenPairs -> [Event]
+genRNEvts lcd = genEvts lcd . map (Lbl . event . Std . snd)
 \end{code}
 
 \subsection{Generate Name-Process Pairs}
@@ -137,7 +139,7 @@ genProc p i crp Stop = (ind i "STOP":crp)
 genProc p i crp Skip = (ind i "SKIP":crp)
 genProc p i crp (CSPvar v) = (ind i v:crp)
 genProc p i crp (CSPpfx pfx csp)
-  = genProc p (i+2) (ind i (pfx ++ " -> "):crp) csp
+  = genProc p (i+2) (ind i (show pfx ++ " -> "):crp) csp
 genProc p i crp (Seq csp1 csp2)  = genInfix p i crp csp1 ";" csp2
 genProc p i crp (IntC csp1 csp2) = genInfix p i crp csp1 "|~|" csp2
 genProc p i crp (ExtC csp1 csp2) = genInfix p i crp csp1 "[]" csp2
@@ -145,7 +147,7 @@ genProc p i crp (Par evts csp1 csp2)
  = genInfix p i crp csp1 parevts csp2
  where
    parevts = "[| {"++levts++"} |]"
-   levts = concat $ intersperse "," $ S.toList evts
+   levts = concat $ intersperse "," $ map show $ S.toList evts
 
 -- P \ A
 genProc p i crp (Hide evts csp)
@@ -154,7 +156,7 @@ genProc p i crp (Hide evts csp)
        crp3 = ind i "\\" : crp2
    in ind i ("{"++levts++"}") : crp3
  where
-   levts = concat $ intersperse "," $ S.toList evts
+   levts = concat $ intersperse "," $ map show $ S.toList evts
 
 -- P[[from <- to]]
 genProc p i crp (CSPren rename csp)

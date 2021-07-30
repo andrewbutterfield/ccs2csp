@@ -156,7 +156,7 @@ that returns a list of processes that can result from a specified label event.
 \end{eqnarray*}
 \begin{code}
 -- isCCS
-afterEvt :: CCS_Pfx -> CCS -> [CCS]
+afterEvt :: Event -> CCS -> [CCS]
 afterEvt pfx (CCSpfx pfx' ccs)
   | pfx == pfx'                 =  [ccs]
 afterEvt pfx (Sum p1 p2)        =  concat $ map (afterEvt pfx) [p1,p2]
@@ -243,7 +243,7 @@ Corrollary 3 ([CC],p63)
 
 \subsubsection{Recursion}
 
-$X$ is sequential in $E$ if it occurs only inside \verb"CCS_Pfx" or Sum.
+$X$ is sequential in $E$ if it occurs only inside \verb"Event" or Sum.
 
 $X$ is guarded in $E$ if each occurrence inside some $\ell.F$ within $E$.
 

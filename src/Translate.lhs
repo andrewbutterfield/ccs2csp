@@ -133,7 +133,7 @@ ixFrom i ccs = (ccs,i)
 
 Helper functions for $ix$ :
 \begin{code}
-iPfx :: Int -> CCS_Pfx -> (CCS_Pfx, Int)
+iPfx :: Int -> Event -> (Event, Int)
 iPfx i T = (T,i)
 iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2)
 -- ix(t[a|a-bar]) = t[a12|a12-bar]
@@ -145,14 +145,14 @@ iLbl i (nm,_) = (nm,One i)
 
 Here we implement $a_i \in \Alf ix(P)$ for $a$ in restricted or hidden set.
 \begin{code}
-cameFromIxLab :: (Set IxLab) -> CCS_Pfx -> Bool
+cameFromIxLab :: (Set IxLab) -> Event -> Bool
 cameFromIxLab es (Lbl e)  =  (root . fst) e `S.member` S.map (root . fst) es
 cameFromIxLab _  _        =  False
 
-cameFromPfx :: (Set CCS_Pfx) -> CCS_Pfx -> Bool
+cameFromPfx :: (Set Event) -> Event -> Bool
 cameFromPfx pfxs pfx  =  cameFromIxLab (S.map getlbl $ S.filter isLbl pfxs) pfx
 
-getlbl :: CCS_Pfx -> IxLab
+getlbl :: Event -> IxLab
 getlbl (Lbl lbl)  =  lbl
 \end{code}
 
@@ -359,53 +359,21 @@ Note
 that only $\tau[a_{ij}|\bar a_{ij}]$ and $\bar a_{ij}$ prefixes are altered,
 in each case to $a_{ij}$.
 \begin{code}
-conm :: CCS_Pfx -> CCS_Pfx
+conm :: Event -> Event
 conm (Lbl (Bar nm,ix@(Two _ _)))  =  Lbl (Std nm,ix)
 conm (T' nm ix)                   =  Lbl (Std nm,ix)
 conm ccs_pfx                      =  ccs_pfx
 \end{code}
 There are no more explicit $\tau[\dots]$ prefixes.
+We invoke $conm$ here,
+(and $ai2a$, see below)
+from within $tl$ as we do the translation.
 
-There is another transformation $ai2a$ done after the translation
-to CSP:
-$$ai2a \defeq \setof{a_i \mapsto a, \bar a_i \mapsto \bar a}$$.
-Since in CSP, an indexed-label has become a flat CSP event name,
-it makes sense to apply $ai2a$ here.
-\begin{code}
-ai2a :: CCS_Pfx -> CCS_Pfx
-ai2a (Lbl (lbl,(One _)))  =  Lbl (lbl,None)
-ai2a pfx                  =  pfx
-\end{code}
-
-We invoke $conm$ here from within $tl$ as we do the translation,
-and the following code deals with the indexed-labels.
-\begin{code}
-tlprefix :: CCS_Pfx ->  CSP_Pfx
-tlprefix = tlp . ai2a . conm
-
-tauInCSP = "TAU"
-
-tlp T = tauInCSP
-tlp (Lbl ixlbl) = tlix ixlbl
-
-tlix :: IxLab -> CSP_Pfx
-tlix ix       =  tll ix
-
-tll (nm,ix)   =  tln nm++tli ix
-
-tln (Std nm)  =  nm
-tln (Bar nm)  =  nm
-
-tli None      =  ""
-tli (One i)   =  "_"++show i
-tli (Two i j) =  "_"++show i++"_"++show j
-\end{code}
-
-\newpage
 \subsubsection{$tl$ --- from CCStau to CSP}
 
 Now, the move to CSP.
 \begin{code}
+tauInCSP = Lbl (Std "TAU",None)
 tl :: CCSTau -> CSP
 \end{code}
 
@@ -423,11 +391,12 @@ tl :: CCSTau -> CSP
 \end{eqnarray*}
 \begin{code}
 tl Zero                   =  Stop
-tl (CCSpfx pfx ccs)       =  CSPpfx (tlprefix pfx) $ tl ccs
+tl (CCSpfx T ccs)         =  CSPpfx tauInCSP $ tl ccs
+tl (CCSpfx pfx ccs)       =  CSPpfx (ai2a $ conm pfx) $ tl ccs
 tl (CCSvar pname)         =  CSPvar pname
 tl (Sum ccs1 ccs2)        =  ExtC (tl ccs1) (tl ccs2)
-tl (CCStauHide pfxs ccs)  =  Hide (S.map tlprefix pfxs) $ tl ccs
-tl (Rstr ixs ccs)         =  Par (S.map tll ixs) (tl ccs) Stop
+tl (CCStauHide pfxs ccs)  =  Hide pfxs $ tl ccs
+tl (Rstr ixs ccs)         =  Par (S.map Lbl ixs) (tl ccs) Stop
 tl (CCSren rpairs ccs)    =  tl $ doRename (endo rpairs) ccs
 tl (CCStauPar ccs1 ccs2)  =  Par sync csp1 csp2
   where csp1  =  tl(ccs1)
@@ -448,179 +417,31 @@ t2csp ccs = Hide (S.singleton tauInCSP) $ tl $ gsp S.empty $ ix ccs
 
 The final step hides synchronisation names (doubly-indexed)
 and removes indices from singly-indexed events.
-$$
-ccs2csp(P)
-\defeq
-(ai2a \circ t2csp \circ c2ccs\tau)(P)
-\hide\setof{a_{ij}\mid a_{ij} \in \Alf t2csp(c2ccs\tau(P))}
-$$
+\begin{eqnarray*}
+   ai2a
+   &\defeq& \setof{a_i \mapsto a, \bar a_i \mapsto \bar a}
+\end{eqnarray*}
+\begin{code}
+ai2a :: Event -> Event
+ai2a (Lbl (lbl,(One _)))  =  Lbl (lbl,None)
+ai2a pfx                  =  pfx
+\end{code}
+We can apply this as translation to CSP is done.
 
-We have already done the latter ($ai2a$),
-so all the remains is the former:
+\begin{eqnarray*}
+   ccs2csp(P)
+   &\defeq&
+   (ai2a \circ t2csp \circ c2ccs\tau)(P)
+   \hide
+   \setof{a_{ij}\mid a_{ij} \in \Alf t2csp(c2ccs\tau(P))}
+\end{eqnarray*}
 \begin{code}
 ccs2csp :: CCS -> CSP
 ccs2csp ccs
   = Hide syncevts csp
   where
     csp = t2csp $ c2ccsT ccs
-    syncevts = S.empty
+    syncevts = S.filter dblIndexes $ alpha csp
+    dblIndexes (Lbl (_,Two _ _))  =  True
+    dblIndexes _                  =  False
 \end{code}
-
-
-\newpage
-Unsure about these:
-For $P$ a CCS process, recall ``after-tau'':
-$
-   \circ\tau(P) \defeq
-     \{ P' \mid P \trans\tau P' \}
-$.
-
-\begin{eqnarray*}
-   c4star(S,P) &\defeq& g^*(S,ix(P))
-\\ c2star(S,P)
-   &\defeq&
-   c4star(S,P)\restrict \{g\pi_2(S,a_i)\mid a_i \in \Alf ix(P)\}
-\end{eqnarray*}
-\begin{code}
-c4star iCtxt ccs = gsp iCtxt $ ix ccs
-c2star iCtxt ccs
- = let
-     ccsi = ix ccs
-     ccsa = getCCSLbls ccsi
-     res = S.unions $ S.map (gsa2 iCtxt) ccsa
-   in Rstr res $ gsp iCtxt ccsi
-\end{code}
-
-
-
-
-% Top-level translation:
-% \begin{code}
-% ccs2csp :: CCS -> CSP
-% ccs2csp = t2csp S.empty
-% \end{code}
-
-% \newpage
-% \subsection{Old Stuff}
-%
-% \textbf{No Longer sure what the following is about}
-%
-% We use $\Sigma_i a_i . P$ as shorthand for $\Sigma_i (a_i . p)$,
-% and we consider $a_{ij}$, $a_{ji}$ to be the same,
-% with $i\neq j$.
-% We also use $\alpha$ to
-% range over $a,b,c,\dots$ and $\bar a,\bar b, \bar c,\dots$.
-%
-% \begin{eqnarray*}
-%    pre\!-\!g_T(P) &=& namesOf(P) \subseteq dom(T)
-% \\ g_T(0)
-%    &\defeq& 0
-% \\ g_T(\alpha_i.P)
-%    &\defeq&
-%    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
-% \\ g_T(P|Q)
-%    &\defeq&
-%    \left( g_T(P) | g_T(Q) \right)
-%    \setminus
-%    \{\alpha_{ij} \mid \alpha_i \in P, \bar\alpha_j \in Q\}
-% \\ g_T(P+Q)
-%    &\defeq&
-%    \left( g_T(P) + g_T(Q) \right)
-% \\ g_T(P\setminus L)
-%    &\defeq&
-%    g_T(P)\setminus g'_T(L) \quad \textrm{can this be the identity?}
-% \\ g_T(P[f])
-%    &\defeq&
-%    g_T(P)[f]
-% \\ g_T(X)
-%    &\defeq&
-%    X
-% \\ g_T(\mu X \bullet P)
-%    &\defeq&
-%    \mu X \bullet g_T(P)
-% \end{eqnarray*}
-%
-% \begin{code}
-% ccs2star :: CCS -> CCS
-% ccs2star ccs
-%  = c2star imap iccs
-%  where  iccs = indexNames ccs
-%         imap = indexMap iccs
-%
-%         c2star :: IxMap -> CCS -> CCS
-%
-%         c2star imap (CCSpfx (Lbl (alfa,(One i))) ccs)
-%           = sumPrefixes imap alfa i $ c2star imap ccs
-%
-%         c2star imap (Comp ccs1 ccs2)
-%           = rstr (syncPre $ map (S.toList . prefixesOf) [ccs1,ccs2])
-%                  $ cpar $ map (c2star imap) [ccs1,ccs2]
-%
-%         c2star imap (Sum ccs1 ccs2) = csum $ map (c2star imap) [ccs1,ccs2]
-%
-%         c2star imap (Rstr es ccs) = Rstr es $ c2star imap ccs -- ? f es
-%
-%         c2star imap (CCSren f ccs) = CCSren f $ c2star imap ccs
-%
-%         c2star imap (CCSmu x ccs) = CCSmu x $ c2star imap ccs
-%
-%         c2star imap ccs = ccs -- 0, X
-% \end{code}
-%
-% \begin{eqnarray*}
-% \\ g_T(\alpha_i.P)
-%    &\defeq&
-%    (\alpha_i + \Sigma_{j \in T(\bar \alpha)} \alpha_{ij}).g_T(P)
-% \end{eqnarray*}
-% \begin{code}
-% sumPrefixes :: IxMap -> Label -> Int -> CCS -> CCS
-% sumPrefixes imap alfa i ccs
-%   = case M.lookup (bar alfa) imap of
-%       Nothing  ->  CCSpfx (Lbl (alfa,One i)) ccs
-%       Just evts
-%         -> let alpha2s = map (mkSyncEvt alfa i) $ S.toList evts
-%            in csum $ map (affix ccs) ((alfa,One i):alpha2s)
-%
-% mkSyncEvt alfa i (One j) = i2event alfa i j
-% affix ccs e = CCSpfx (Lbl e) ccs
-% \end{code}
-%
-% \begin{eqnarray*}
-%    g_T(P|Q)
-%    &\defeq&
-%    \left( g_T(P) | g_T(Q) \right)
-%    \setminus
-%    \{\alpha_{ij} \mid \alpha_i \in P, \bar\alpha_j \in Q\}
-% \\ g_T(\Pi_p P_p)
-%    &\defeq&
-%    \left( \Pi_p g_T(P_p) \right)
-%    \setminus
-%    \{\alpha_{ij} \mid \alpha_i \in P_m, \bar\alpha_j \in P_n, m \neq n\}
-% \end{eqnarray*}
-% \begin{code}
-% syncPre :: [[CCS_Pfx]] -> [IxLab]
-% syncPre = concat . findSync syncPre1
-%
-% --
-% syncPre1 :: [CCS_Pfx] -> [CCS_Pfx] -> [[IxLab]]
-% syncPre1 ps1 ps2 = map (f ps1) ps2
-%  where f ps1 p2 = concat $ map (syncPre2 p2) ps1
-% \end{code}
-%
-% \begin{code}
-% syncPre2 :: CCS_Pfx -> CCS_Pfx -> [IxLab]
-% syncPre2 (Lbl (Std m,One i)) (Lbl (Bar n,One j)) | m == n  =  syncE m i j
-% syncPre2 (Lbl (Bar m,One i)) (Lbl (Std n,One j)) | m == n  =  syncE m i j
-% syncPre2 _                   _                             =  []
-%
-% syncE s i j = [i2event (Std s) i j]
-% \end{code}
-%
-%
-% We need the following
-% \begin{code}
-% findSync :: (a -> a -> [b]) -> [a] -> [b]
-% findSync op [] = []
-% findSync op [_] = []
-% findSync op (as:ass) = concat (map (op as) ass) ++ findSync op ass
-% \end{code}
