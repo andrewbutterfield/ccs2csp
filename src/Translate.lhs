@@ -348,7 +348,7 @@ their eventual CSP forms.
    conm
    &\defeq&
    \{ \tau\mapsto\tau
-    , a_i\mapsto a_
+    , a_i\mapsto a_i
     , \bar a_i \mapsto \bar a_i
     , a_{ij} \mapsto a_{ij}
     , \bar a_{ij} \mapsto a_{ij}
@@ -365,13 +365,25 @@ conm (T' nm ix)                   =  Lbl (Std nm,ix)
 conm ccs_pfx                      =  ccs_pfx
 \end{code}
 There are no more explicit $\tau[\dots]$ prefixes.
+
+There is another transformation $ai2a$ done after the translation
+to CSP:
+$$ai2a \defeq \setof{a_i \mapsto a, \bar a_i \mapsto \bar a}$$.
+Since in CSP, an indexed-label has become a flat CSP event name,
+it makes sense to apply $ai2a$ here.
+\begin{code}
+ai2a :: CCS_Pfx -> CCS_Pfx
+ai2a (Lbl (lbl,(One _)))  =  Lbl (lbl,None)
+ai2a pfx                  =  pfx
+\end{code}
+
 We invoke $conm$ here from within $tl$ as we do the translation,
 and the following code deals with the indexed-labels.
 \begin{code}
 tlprefix :: CCS_Pfx ->  CSP_Pfx
-tlprefix = tlp . conm
+tlprefix = tlp . ai2a . conm
 
-tauInCSP = "tau"
+tauInCSP = "TAU"
 
 tlp T = tauInCSP
 tlp (Lbl ixlbl) = tlix ixlbl
@@ -425,7 +437,34 @@ tl (CCStauPar ccs1 ccs2)  =  Par sync csp1 csp2
         sync  =  alf1 `S.intersection` alf2
 \end{code}
 
+For $P$ a CCSTau process:
+\begin{eqnarray*}
+    t2csp(P) &\defeq& (tl \circ conm \circ g^* \circ ix)(P) \hide \setof{tau}
+\end{eqnarray*}
+\begin{code}
+t2csp :: CCSTau -> CSP
+t2csp ccs = Hide (S.singleton tauInCSP) $ tl $ gsp S.empty $ ix ccs
+\end{code}
 
+The final step hides synchronisation names (doubly-indexed)
+and removes indices from singly-indexed events.
+$$
+ccs2csp(P)
+\defeq
+(ai2a \circ t2csp \circ c2ccs\tau)(P)
+\hide\setof{a_{ij}\mid a_{ij} \in \Alf t2csp(c2ccs\tau(P))}
+$$
+
+We have already done the latter ($ai2a$),
+so all the remains is the former:
+\begin{code}
+ccs2csp :: CCS -> CSP
+ccs2csp ccs
+  = Hide syncevts csp
+  where
+    csp = t2csp $ c2ccsT ccs
+    syncevts = S.empty
+\end{code}
 
 
 \newpage
@@ -452,21 +491,14 @@ c2star iCtxt ccs
    in Rstr res $ gsp iCtxt ccsi
 \end{code}
 
-For $P$ a CCSTau process:
-\begin{eqnarray*}
-    t2csp(S,P) &\defeq& tl(conm(c4star(S,P)))
-\end{eqnarray*}
-\begin{code}
-t2csp :: Set IxLab -> CCS -> CSP
-t2csp iCtxt ccs = tl $ c4star iCtxt ccs
-\end{code}
 
 
-Top-level translation:
-\begin{code}
-ccs2csp :: CCS -> CSP
-ccs2csp = t2csp S.empty
-\end{code}
+
+% Top-level translation:
+% \begin{code}
+% ccs2csp :: CCS -> CSP
+% ccs2csp = t2csp S.empty
+% \end{code}
 
 % \newpage
 % \subsection{Old Stuff}
