@@ -141,7 +141,7 @@ Helper functions for $ix$ :
 iPfx :: Int -> Event -> (Event, Int)
 iPfx i T = (T,i)
 iPfx i (T' n _)  = (T' n (Two i (i+1)),i+2)
--- ix(t[a|a-bar]) = t[a12|a12-bar]
+-- ix(t[a|a_bar]) = t[a12|a12_bar]
 iPfx i (Lbl e) = (Lbl (iLbl i e), i+1)
 
 iLbl :: Int -> IxLab -> IxLab
@@ -401,15 +401,15 @@ tl (CCSpfx T ccs)         =  CSPpfx tauInCSP $ tl ccs
 tl (CCSpfx pfx ccs)       =  CSPpfx (ai2a $ conm pfx) $ tl ccs
 tl (CCSvar pname)         =  CSPvar pname
 tl (Sum ccs1 ccs2)        =  ExtC (tl ccs1) (tl ccs2)
-tl (CCStauHide pfxs ccs)  =  Hide pfxs $ tl ccs
-tl (Rstr ixs ccs)         =  Par (S.map Lbl ixs) (tl ccs) Stop
+tl (CCStauHide es ccs)    =  Hide (S.map ai2a es) $ tl ccs
+tl (Rstr ixs ccs)         =  Par (S.map (ai2a . Lbl) ixs) (tl ccs) Stop
 tl (CCSren rpairs ccs)    =  tl $ doRename (endo rpairs) ccs
 tl (CCStauPar ccs1 ccs2)  =  Par sync csp1 csp2
   where csp1  =  tl(ccs1)
         csp2  =  tl(ccs2)
         alf1  =  alpha csp1 -- S.map show $ alpha csp1
         alf2  =  alpha csp2 -- S.map show $ alpha csp2
-        sync  =  alf1 `S.intersection` alf2
+        sync  =  S.map ai2a (alf1 `S.intersection` alf2)
 \end{code}
 
 For $P$ a CCSTau process:

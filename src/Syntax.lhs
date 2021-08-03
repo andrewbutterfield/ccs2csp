@@ -71,7 +71,7 @@ i2event ell i j -- reorder indices so first <= second
 
 showIxLab :: IxLab -> String
 showIxLab (Std ell,i) = ell ++ show i
-showIxLab (Bar ell,i) = ell ++ show i ++ "-bar"
+showIxLab (Bar ell,i) = ell ++ show i ++ "_bar"
 
 ixlbar :: IxLab -> IxLab
 ixlbar (ell,i) = (bar ell,i)
@@ -84,8 +84,8 @@ For CCSTau, we also add (possibly indexed) visible synchronisations
 \begin{code}
 data Event
   = T                 -- CSS tau
-  | Lbl IxLab         -- CCS a or a-bar
-  | T' String Index   -- CCStau  t[a|a-bar]
+  | Lbl IxLab         -- CCS a or a_bar
+  | T' String Index   -- CCStau  t[a|a_bar]
   deriving (Eq,Ord,Read)
 
 isLbl :: Event -> Bool
@@ -95,8 +95,8 @@ isLbl _        =  False
 instance Show Event where
   show T                =  "tau"
   show (Lbl (Std s,i))  =  s ++ show i
-  show (Lbl (Bar s,i))  =  s ++ show i ++ "-bar"
-  show (T' n i)           =  show T ++ show i++"["++n++"|"++n++"-bar]"
+  show (Lbl (Bar s,i))  =  s ++ show i ++ "_bar"
+  show (T' n i)           =  show T ++ show i++"["++n++"|"++n++"_bar]"
 
 pfxbar :: Event -> Event
 pfxbar (Lbl e)  =  Lbl $ ixlbar e

@@ -122,8 +122,8 @@ xmp_aIabar = runExample aIabar
 
 Example 4 from [EKB]: $(a.0|\bar a.0)\restrict\setof a$
 \begin{code}
--- p21 g*({},(a.0 | a-bar.0)|' {a})
-   -- =  ((a1.0+a12.0)|(a2-bar.0+a12-bar.0)) |' {a1,a2}
+-- p21 g*({},(a.0 | a_bar.0)|' {a})
+   -- =  ((a1.0+a12.0)|(a2_bar.0+a12_bar.0)) |' {a1,a2}
 noaIabar = Rstr (S.singleton ea) aIabar
 xmp_noaIabar = runExample noaIabar
 \end{code}
@@ -144,7 +144,7 @@ Example 7 from [EKB]: $ (a.0|\bar a.0)\restrict\setof a + b.0$
 \end{eqnarray*}
 
 \begin{code}
--- p29  g*((a.0 | a-bar.0)|' {a} + b.0)
+-- p29  g*((a.0 | a_bar.0)|' {a} + b.0)
 bAndaIabar = csum [noaIabar,b0]
 xmp_bAndaIabar = runExample bAndaIabar
 \end{code}
@@ -167,7 +167,7 @@ xmp2 = cpar [CCSpfx a p,CCSpfx T q]
 
 $$ a.b.0 | \bar b.\bar a.0$$
 \begin{code}
--- a.b.0 | b-bar.a-bar.0
+-- a.b.0 | b_bar.a_bar.0
 xms1 = cpar [ CCSpfx a (CCSpfx b Zero), CCSpfx bbar (CCSpfx abar Zero)]
 \end{code}
 
