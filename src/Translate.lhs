@@ -1,4 +1,4 @@
-ilbls\section{Translate}
+\section{Translate}
 \begin{verbatim}
 Copyright  Andrew Buttefield (c) 2020-21
 
@@ -398,18 +398,16 @@ tl :: CCSTau -> CSP
 \begin{code}
 tl Zero                   =  Stop
 tl (CCSpfx T ccs)         =  CSPpfx tauInCSP $ tl ccs
-tl (CCSpfx pfx ccs)       =  CSPpfx (ai2a $ conm pfx) $ tl ccs
+tl (CCSpfx pfx ccs)       =  CSPpfx (conm pfx) $ tl ccs
 tl (CCSvar pname)         =  CSPvar pname
 tl (Sum ccs1 ccs2)        =  ExtC (tl ccs1) (tl ccs2)
-tl (CCStauHide es ccs)    =  Hide (S.map ai2a es) $ tl ccs
-tl (Rstr ixs ccs)         =  Par (S.map (ai2a . Lbl) ixs) (tl ccs) Stop
+tl (CCStauHide es ccs)    =  Hide es $ tl ccs
+tl (Rstr ixs ccs)         =  Par (S.map Lbl ixs) (tl ccs) Stop
 tl (CCSren rpairs ccs)    =  tl $ doRename (endo rpairs) ccs
 tl (CCStauPar ccs1 ccs2)  =  Par sync csp1 csp2
   where csp1  =  tl(ccs1)
         csp2  =  tl(ccs2)
-        alf1  =  alpha csp1 -- S.map show $ alpha csp1
-        alf2  =  alpha csp2 -- S.map show $ alpha csp2
-        sync  =  S.map ai2a (alf1 `S.intersection` alf2)
+        sync  =  alpha csp1 `S.intersection` alpha csp2
 \end{code}
 
 For $P$ a CCSTau process:
@@ -428,9 +426,21 @@ and removes indices from singly-indexed events.
    &\defeq& \setof{a_i \mapsto a, \bar a_i \mapsto \bar a}
 \end{eqnarray*}
 \begin{code}
-ai2a :: Event -> Event
-ai2a (Lbl (lbl,(One _)))  =  Lbl (lbl,None)
-ai2a pfx                  =  pfx
+ai2a :: CSP -> CSP
+ai2a (CSPpfx evt csp)      =  CSPpfx (dropI evt) $ ai2a csp
+ai2a (Seq csp1 csp2)       =  Seq (ai2a csp1) $ ai2a csp2
+ai2a (IntC csp1 csp2)      =  IntC (ai2a csp1) $ ai2a csp2
+ai2a (ExtC csp1 csp2)      =  ExtC (ai2a csp1) $ ai2a csp2
+ai2a (Par evts csp1 csp2)  =  Par (S.map dropI evts) (ai2a csp1) $ ai2a csp2
+ai2a (Hide evts csp)       =  Hide (S.map dropI evts)  $ ai2a csp
+ai2a (CSPren rpairs csp)   =  CSPren rpairs $ ai2a csp
+ai2a (CSPmu nm csp)        =  CSPmu nm $ ai2a csp
+ai2a csp                   =  csp
+\end{code}
+\begin{code}
+dropI :: Event -> Event
+dropI (Lbl (lbl,(One _)))  =  Lbl (lbl,None)
+dropI pfx                  =  pfx
 \end{code}
 We can apply this as translation to CSP is done.
 
@@ -444,10 +454,10 @@ We can apply this as translation to CSP is done.
 \begin{code}
 ccs2csp :: CCS -> CSP
 ccs2csp ccs
-  = Hide syncevts csp
+  = Hide syncevts $ ai2a csp0
   where
-    csp = t2csp $ c2ccsT ccs
-    syncevts = S.filter dblIndexes $ alpha csp
+    csp0 = t2csp $ c2ccsT ccs
+    syncevts = S.filter dblIndexes $ alpha csp0
     dblIndexes (Lbl (_,Two _ _))  =  True
     dblIndexes _                  =  False
 \end{code}

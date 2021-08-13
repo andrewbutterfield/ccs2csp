@@ -62,7 +62,7 @@ genExample ccs
    , ("ccsT ", CCS ccstau)
    , ("ccsTi", CCS ccsi)
    , ("g*0  ", CCS ccsg)
-   , ("tlp  ", CSP csp)
+   , ("tlp  ", CSP tlp)
    , ("tlh  ", CSP tlh)
    , ("csp  ", CSP csp)
    ]
