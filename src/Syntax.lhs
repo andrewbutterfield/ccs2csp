@@ -546,9 +546,8 @@ showEE (e1,e2) = showString e1 .
                  showString e2
 \end{code}
 
-Precedences:
+Precedences \cite[p44]{Comm:Concur:Milner:89}:
 \begin{code}
--- Comm+Conc, p44
 -- tightest: {CCSren,Rstr}, CCSpfx, Seq, Comp, Ext, Sum :loosest
 pSum  =    2;  pSum'  = pSum+1
 pInt  =    2;  pInt'  = pInt+1

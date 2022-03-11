@@ -106,13 +106,14 @@ c0 = CCSpfx c Zero; cbar0 = CCSpfx cbar Zero
 \subsection{Examples}
 
 
+\textbf{Need to check that numbering matches the published paper}.
 
 Example 6 from [EKB]:
 \begin{eqnarray*}
    \lefteqn{a.0|\bar a.0}
 \\ &\leadsto&
    (a_1 \then Stop \extc a_{12} \then Stop)
-   \parallel_{\setof{a_12}}
+   \parallel_{\setof{a_{12}}}
    (a_2 \then Stop \extc a_{12} \then Stop)
 \end{eqnarray*}
 \begin{code}
@@ -134,7 +135,7 @@ Example 7 from [EKB]: $ (a.0|\bar a.0)\restrict\setof a + b.0$
    \lefteqn{(a.0|\bar a.0)\restrict \setof{a} + b.0}
 \\ &\equiv& \tau.0 + b.0
 \\ &\leadsto& ((a_1 \then Stop \extc a_{12} \then Stop)
-\parallel_{\setof{a_12}}
+\parallel_{\setof{a_{12}}}
 (a_2 \then Stop \extc a_{12} \then Stop))
        \hide_{csp} \setof{a_1,a_2,a_{12}}
        \restrict_{csp}\setof{a_1,a_2})
@@ -223,8 +224,9 @@ infixl 7 \\
 (\\) :: CCS -> (Set IxLab) -> CCS
 ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
 \end{code}
-Of interest here, is if our translation of $P\hide H$ as defined above
-is equivalent to translating $P$ to CSP, and then doing the hiding.
+Key question:
+is our translation of $P\hide H$ as defined above
+equivalent to translating $P$ to CSP, and then doing the hiding.
 
 
 \subsection{CSP Examples}
