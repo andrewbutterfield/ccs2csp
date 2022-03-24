@@ -91,7 +91,7 @@ openOutput config arg
 
 help  = putStrLn $ unlines
           [ "usage: ccs2csp [-prc] [infile[.ext1]] [outfile[.ext2]]"
-          , "-prc expects a single CCS process rather than full program"
+          , "-prc expects a single CCS process rather than a full CCS program"
           , "infile[.ext1] defaults to 'stdin'"
           , "outfile[.ext1] defaults to 'stdout'"
           , "ext1 defaults to '"++defaultCCSextension++"'"

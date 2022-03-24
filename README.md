@@ -41,41 +41,21 @@ In general this should not be required as the latest versions of the above three
 
 ### Using
 
-The full CCS syntax supporting `set` and `agent` definitions is not supported right now.
-At the moment all that is supported is reading a single process definition.
-
-
-Once the program is built, go into tests directory.
-
-Running `ccs2csp` brings up a prompt for a filename-root.
-
-If you enter `mytest` (say), then the program will read a single CCS process
-from `mytest.proc`, and then generate a CSP file `mytest.csp` where the translated process is called `MYTEST`.
-
-There are a collection of proc-files already present.
-
-
-
-#### Old style usage
-
-4. Load up the examples module in the GHC interpreter (`ghci`) and experiment in there. It needs to be invoked as follows:  
-```
-stack ghci src/Examples.lhs
-```
-
-5. The browse command `:browse` will list all defined objects with their types. Any object `obj :: CCS` can be translated (at least in principle). Entering the name of a CCS object at the interpreter prompt will show a pretty-printed version of it.
-
-6. New objects can be created by editing `Examples.lhs` and giving the `:r` (reload) command from within GHCi.
-
-7. A demo run of a translation can be run from within GHCi as follows, where `ccsObj` is the name of a CCS object:
+Running `ccs2csp --help` will produce the following output:
 
 ```
-ccs2csp "" ccsObj
+usage: ccs2csp [-prc] [infile[.ext1]] [outfile[.ext2]]
+-prc expects a single CCS process rather than a full CCS program
+infile[.ext1] defaults to 'stdin'
+outfile[.ext1] defaults to 'stdout'
+ext1 defaults to 'proc'
+ext2 defaults to 'csp'
 ```
 
-8. To output to a file (`GEN.csp` say) simply replace empty string by a filename:
+For now, only `ccs2csp -prc ....` works as only single-process translation is supported.
 
-```
-ccs2csp "GEN.csp" ccsObj
-```
-The output is written to `GEN.csp` (here), with a summary printed out in the interpreter.
+So, for example, in the `test` sub-directory, running  
+`ccs2csp -prc bisimA bisimA`  
+will result in `bisimA.proc` being translated into `bisimA.csp`.
+
+The command `ccs2csp -prc` acts as a filter accepting input on `stdin` and outputting to `stdout`.
