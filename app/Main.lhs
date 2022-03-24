@@ -28,7 +28,7 @@ pdbg nm x = Main.dbg ('@':nm++":\n") x
 
 \begin{code}
 progName = "ccs2csp"
-version = "0.0.2.0"
+version = "0.5.0.0"
 name_version = progName++" "++version
 \end{code}
 
