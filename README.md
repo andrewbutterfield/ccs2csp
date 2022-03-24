@@ -73,7 +73,7 @@ stack ghci src/Examples.lhs
 ccs2csp "" ccsObj
 ```
 
-8. To output to a file (`GEN.csp` say) simoply replace empty string by a filename:
+8. To output to a file (`GEN.csp` say) simply replace empty string by a filename:
 
 ```
 ccs2csp "GEN.csp" ccsObj
