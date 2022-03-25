@@ -103,49 +103,32 @@ b0 = CCSpfx b Zero; bbar0 = CCSpfx bbar Zero
 c0 = CCSpfx c Zero; cbar0 = CCSpfx cbar Zero
 \end{code}
 
-\subsection{Examples}
+\subsection{Small Test Examples}
 
-
-\textbf{Need to check that numbering matches the published paper}.
-
-Example 6 from [EKB]:
 \begin{eqnarray*}
    \lefteqn{a.0|\bar a.0}
 \\ &\leadsto&
-   (a_1 \then Stop \extc a_{12} \then Stop)
+   ((a \then Stop \extc a_{12} \then Stop)
    \parallel_{\setof{a_{12}}}
-   (a_2 \then Stop \extc a_{12} \then Stop)
+   (a \then Stop \extc a_{12} \then Stop))\hide \{tau,a_{12}\}
 \end{eqnarray*}
+This is Example 26 from \cite{DBLP:conf/sefm/NgondiKB21}.
 \begin{code}
 aIabar = cpar [a0,abar0]
 xmp_aIabar = runExample aIabar
 \end{code}
 
-Example 4 from [EKB]: $(a.0|\bar a.0)\restrict\setof a$
+
+$$(a.0|\bar a.0)\restrict\setof a$$
 \begin{code}
--- p21 g*({},(a.0 | a_bar.0)|' {a})
-   -- =  ((a1.0+a12.0)|(a2_bar.0+a12_bar.0)) |' {a1,a2}
 noaIabar = Rstr (S.singleton ea) aIabar
 xmp_noaIabar = runExample noaIabar
 \end{code}
 
-Example 7 from [EKB]: $ (a.0|\bar a.0)\restrict\setof a + b.0$
 
-\begin{eqnarray*}
-   \lefteqn{(a.0|\bar a.0)\restrict \setof{a} + b.0}
-\\ &\equiv& \tau.0 + b.0
-\\ &\leadsto& ((a_1 \then Stop \extc a_{12} \then Stop)
-\parallel_{\setof{a_{12}}}
-(a_2 \then Stop \extc a_{12} \then Stop))
-       \hide_{csp} \setof{a_1,a_2,a_{12}}
-       \restrict_{csp}\setof{a_1,a_2})
-      \extc  b \then STOP
-\\ && CCS: Stop \extc b \then Stop
-\\ &&  CCS\tau:  a_{12} \then Stop \extc b \then Stop
-\end{eqnarray*}
-
+$$ (a.0|\bar a.0)\restrict\setof a + b.0$$
 \begin{code}
--- p29  g*((a.0 | a_bar.0)|' {a} + b.0)
+--  g*((a.0 | a_bar.0)|' {a} + b.0)
 bAndaIabar = csum [noaIabar,b0]
 xmp_bAndaIabar = runExample bAndaIabar
 \end{code}
@@ -159,8 +142,8 @@ bAndacIabar = csum [noacIabar,b0]
 xmp_bAndacIabar = runExample bAndacIabar
 \end{code}
 
-Example 2 from [EKB]:
-$a.P + \tau.Q \leadsto (t2csp(a.P)\Box t2csp(Q)) \sqcap t2csp(Q)$ ?
+
+$$a.P + \tau.Q \leadsto (t2csp(a.P)\Box t2csp(Q)) \sqcap t2csp(Q)$$
 \begin{code}
 xmp2 = cpar [CCSpfx a p,CCSpfx T q]
 \end{code}
@@ -172,6 +155,7 @@ $$ a.b.0 | \bar b.\bar a.0$$
 xms1 = cpar [ CCSpfx a (CCSpfx b Zero), CCSpfx bbar (CCSpfx abar Zero)]
 \end{code}
 
+\newpage
 $$ a.b.(\bar a.0|b.0) | \bar b.\bar a.0$$
 \begin{code}
 -- a.b.(abar.0|b.0) | bbar.abar.0
@@ -183,7 +167,6 @@ xms2 = cpar [ CCSpfx a (CCSpfx b (cpar [ CCSpfx abar Zero, CCSpfx b Zero]))
 
 
 $$(a.P|\bar a.Q|\bar a.R|\bar a.S)\restrict\setof a$$
-
 \begin{code}
 x18 = Rstr (S.singleton ea)
        $ cpar [CCSpfx a p, cpar [CCSpfx abar q, cpar [CCSpfx abar r, CCSpfx abar s]]]
@@ -197,8 +180,7 @@ xb19 = cpar [ CCSpfx a (cpar [a0,a0,a0,a0])
             ]
 \end{code}
 
-Example 5 from [EKB]:
-$(a.P)\restrict\setof a = 0$
+$$(a.P)\restrict\setof a = 0$$
 \begin{code}
 aPra = Rstr (S.singleton ea) (CCSpfx a p)
 \end{code}
@@ -226,15 +208,12 @@ ccs \\ ilbls  =  Rstr ilbls $ cpar (ccs:map ever (S.toList ilbls))
 \end{code}
 Key question:
 is our translation of $P\hide H$ as defined above
-equivalent to translating $P$ to CSP, and then doing the hiding.
+equivalent to translating $P$ to CSP, and then doing the hiding?
 
 
 \subsection{CSP Examples}
 
-These examples are mainly to check the CSPm rendering.
-
-
-Examples:
+These examples are mainly to check the CSPm rendering:
 \begin{code}
 aThenBStar           =  pfx a $ CSPmu "P" $ pfx b $ CSPvar "P"
 aThenBonBwithBthenC  =  par [b] (pfxs [a,b] Skip) (pfxs [b,c] Skip)

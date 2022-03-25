@@ -23,7 +23,7 @@ pdbg name  = Semantics.dbg (name++" = ")
 \subsubsection{Operational Semantics}
 
 
-From [CC],p46
+From \cite{Comm:Concur:Milner:89},p46
 
 \begin{mathpar}
   \infer{ }{\alpha.E \trans\alpha E} \; Act
@@ -186,7 +186,7 @@ parBodiesAfterEvts ccs1 ccs2
 
 \subsubsection{Equational Laws}
 
-From [CC],pp62--80.
+From \cite{Comm:Concur:Milner:89},pp62--80.
 
 Law $E_1 = E_2$ means that, for all $\alpha$,
 that $E_1 \wktrans\alpha E'$ iff $E_2 \wktrans\alpha E'$.
@@ -198,7 +198,7 @@ type LawFun m = CCS -> m CCS
 
 \subsubsection{Monoid Laws}
 
-Proposition 1 ([CC],p62).
+Proposition 1 (\cite{Comm:Concur:Milner:89},p62).
 \begin{eqnarray}
    P+Q &=& Q+P
 \\ P+(Q+R) &=& (P+Q)+R
@@ -224,7 +224,7 @@ sumNorm p = return p -- to be implemented
 
 \subsubsection{$\tau$ Laws}
 
-Proposition 2 ([CC],p62).
+Proposition 2 (\cite{Comm:Concur:Milner:89},p62).
 \begin{eqnarray}
    \alpha.\tau.P &=& a.P
 \\ P+\tau.P &=& \tau.P
@@ -236,7 +236,7 @@ tauAbsorb _ = fail "not a.t.P"
 sumTau _ = fail "not P+t.P"
 sumTau2 = fail "not a.(P+t.Q)+a.Q"
 \end{code}
-Corrollary 3 ([CC],p63)
+Corrollary 3 (\cite{Comm:Concur:Milner:89},p63)
 \begin{eqnarray}
    P+\tau.(P+Q) &=& \tau.(P+Q)
 \end{eqnarray}

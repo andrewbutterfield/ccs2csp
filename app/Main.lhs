@@ -52,7 +52,7 @@ data Config
             , cspfile  ::  Handle
             , mode     ::  Mode
             }
-config0 = Config False stdin stdout DoProgram
+config0 = Config False stdin stdout DoProcess
 \end{code}
 
 Command-line argument handling:
@@ -61,15 +61,15 @@ processArgs :: [String] -> IO Config
 processArgs [] = return config0
 processArgs [arg]
   | arg == "--help"  =  return $ config0{ helpout = True }
-  | arg == "-prc"    =  return $ config0{ mode = DoProcess }
+  | arg == "-prog"   =  return $ config0{ mode = DoProgram }
   | otherwise        =  openInput config0 arg
 processArgs [arg1,arg2]
-  | arg1 == "-prc"  =  openInput config0{ mode = DoProcess } arg2
+  | arg1 == "-prog"  =  openInput config0{ mode = DoProgram } arg2
   | otherwise  =  do configI <- openInput config0 arg1
                      openOutput configI arg2
 processArgs [arg1,arg2,arg3]
-  | arg1 == "-prc"
-    = do let configP = config0{ mode = DoProcess }
+  | arg1 == "-prog"
+    = do let configP = config0{ mode = DoProgram }
          configI <- openInput configP arg2
          openOutput configI arg3
 processArgs _  =  help >> stop
@@ -90,8 +90,8 @@ openOutput config arg
        return config{ cspfile = h }
 
 help  = putStrLn $ unlines
-          [ "usage: ccs2csp [-prc] [infile[.ext1]] [outfile[.ext2]]"
-          , "-prc expects a single CCS process rather than a full CCS program"
+          [ "usage: ccs2csp [-prog] [infile[.ext1]] [outfile[.ext2]]"
+          , "-prog expects a full CCS program rather than a single CCS process"
           , "infile[.ext1] defaults to 'stdin'"
           , "outfile[.ext1] defaults to 'stdout'"
           , "ext1 defaults to '"++defaultCCSextension++"'"

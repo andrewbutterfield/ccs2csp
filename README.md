@@ -44,18 +44,18 @@ In general this should not be required as the latest versions of the above three
 Running `ccs2csp --help` will produce the following output:
 
 ```
-usage: ccs2csp [-prc] [infile[.ext1]] [outfile[.ext2]]
--prc expects a single CCS process rather than a full CCS program
+usage: ccs2csp [-prog] [infile[.ext1]] [outfile[.ext2]]
+-prog expects a full CCS program rather than a single CCS process
 infile[.ext1] defaults to 'stdin'
 outfile[.ext1] defaults to 'stdout'
 ext1 defaults to 'proc'
 ext2 defaults to 'csp'
 ```
 
-For now, only `ccs2csp -prc ....` works as only single-process translation is supported.
+For now, `ccs2csp -prog ....` does not work as only single-process translation is supported.
 
 So, for example, in the `test` sub-directory, running  
-`ccs2csp -prc bisimA bisimA`  
+`ccs2csp bisimA bisimA`  
 will result in `bisimA.proc` being translated into `bisimA.csp`.
 
-The command `ccs2csp -prc` acts as a filter accepting input on `stdin` and outputting to `stdout`.
+The command `ccs2csp` acts as a filter accepting input on `stdin` and outputting to `stdout`.

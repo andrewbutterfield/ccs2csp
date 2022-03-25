@@ -88,7 +88,8 @@ nmdProcs rpn _                 =  rpn
 \subsection{CSPM Operator Precedence}
 
 We note the following precedence order from
-\verb"https://cocotec.io/fdr/manual/cspm/syntax.html#csp-binding-strength".
+\\
+\url{https://cocotec.io/fdr/manual/cspm/syntax.html#csp-binding-strength}.
 \begin{verbatim}
  1. Parenthesis (non-associative), Rename (non-associative)
  2. Concat (left-associative)
