@@ -1,6 +1,6 @@
 \section{Control}
 \begin{verbatim}
-Copyright  Andrew Buttefield (c) 2020
+Copyright  Andrew Butterfield (c) 2020-2022
 
 LICENSE: BSD3, see file LICENSE at ccs2csp root
 \end{verbatim}

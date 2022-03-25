@@ -1,6 +1,6 @@
-genProc\section{Generating CSPm}
+\section{Generating CSPm}
 \begin{verbatim}
-Copyright  Andrew Buttefield (c) 2020-21
+Copyright  Andrew Butterfield (c) 2020-22
 
 LICENSE: BSD3, see file LICENSE at ccs2csp root
 \end{verbatim}
