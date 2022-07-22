@@ -3,6 +3,9 @@
 Haskell coding of CCS to CSP translation ideas being developed
 by Gerard Ekembe Ngondi.
 
+[![DOI](https://zenodo.org/badge/298622792.svg)](https://zenodo.org/badge/latestdoi/298622792)
+
+
 ## Acknowledgements
 
 CCS parser derived from grammar file obtained from Aalborg
