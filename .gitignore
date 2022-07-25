@@ -29,3 +29,5 @@ src/TestCCS
 src/TestCCS.hi
 src/TestCCS.hs
 test/*.csp
+Journal-draft.pdf
+paperXmpls
