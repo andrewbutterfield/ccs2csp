@@ -57,7 +57,7 @@ c2ccsT (Rstr lbls ccs)   =  Rstr lbls $ c2ccsT ccs
 c2ccsT (CCSren rp ccs)   =  CCSren rp $ c2ccsT ccs
 c2ccsT (CCSmu nm ccs)    =  CCSmu nm $  c2ccsT ccs
 c2ccsT (Comp ccs1 ccs2)
-  = visibleTaus `CCStauHide` (ccs1 `CCStauPar` ccs2)
+  = visibleTaus `CCStauHide` (c2ccsT ccs1 `CCStauPar` c2ccsT ccs2)
   where
     alf1 = alf ccs1
     alf2 = alf ccs2
@@ -425,7 +425,7 @@ For $P$ a CCSTau process:
 \end{eqnarray*}
 \begin{code}
 t2csp :: CCSTau -> CSP
-t2csp   = htau . tl . gsp0 . ix 
+t2csp   = htau . tl . gsp0 . ix
 \end{code}
 
 The final steps remove the indices from the alphabet of the CSP process:
