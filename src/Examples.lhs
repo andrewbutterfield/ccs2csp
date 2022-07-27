@@ -25,22 +25,31 @@ import CCSm
 --dbg msg x = trace (msg++show x) x
 \end{code}
 
-\subsection{Milners ``Comms and Conc'' book.}
+\subsection{Example Intro.}
 
-The following example is used to demonstrate the precedence
-of the various CCS binary operators.
-\begin{code}
--- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
-p = CCSvar "P" ; q = CCSvar "Q" ; r = CCSvar "R" ; s = CCSvar "S"
-ell = (Std "L",None)
-cc44 = csum [ r
-            , cpar [ CCSpfx a p
-                   , CCSpfx b (Rstr (S.singleton ell) q)
-                   ]
-            ]
-\end{code}
-It does not play well with the translation because the abstract syntax
-does not support names for restriction sets, only explicit set enumerations.
+We provide code (\texttt{gen}$|$\texttt{show}$|$\texttt{run}\texttt{-Example})
+that takes CCS input and generates CSP,
+showing all the intermediate steps.
+This is used by the main program.
+
+We also have some hard-code examples,
+which can be accessed by loading this module
+into the Haskell interpreter (\texttt{ghci}).
+This should be done via the \texttt{stack} utility.
+From the top-level of this repository:
+\begin{verbatim}
+stack ghci src/Examples
+\end{verbatim}
+Applying \texttt{runExample} to any value of type \texttt{CCS}
+will print out all the translation steps.
+
+Example CCS source files (\texttt{*.proc}) can be found
+in the \texttt{test} sub-directory.
+Those at the top-level are simple tests.
+Sub-directories contain examples from papers,
+both published (e.g. \texttt{SEFM21/}\cite{DBLP:conf/sefm/NgondiKB21}),
+and in-preparation/review (\texttt{draft/}).
+
 
 \newpage
 \subsection{Showing Examples}
@@ -90,6 +99,24 @@ We use \texttt{runExample} to to generate and display that list
 runExample :: CCS -> IO ()
 runExample  =  putStrLn . showExample . genExample
 \end{code}
+
+\newpage
+\subsection{Milners ``Comms and Conc'' book.}
+
+The following example is used to demonstrate the precedence
+of the various CCS binary operators.
+\begin{code}
+-- p44  R+a.P|b.Q\L = R+((a.P)|(b.(Q\L)))
+p = CCSvar "P" ; q = CCSvar "Q" ; r = CCSvar "R" ; s = CCSvar "S"
+ell = (Std "L",None)
+cc44 = csum [ r
+            , cpar [ CCSpfx a p
+                   , CCSpfx b (Rstr (S.singleton ell) q)
+                   ]
+            ]
+\end{code}
+It does not play well with the translation because the abstract syntax
+does not support names for restriction sets, only explicit set enumerations.
 
 
 \newpage
