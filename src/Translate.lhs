@@ -371,8 +371,7 @@ conm (T' nm ix)                   =  Lbl (Std nm,ix)
 conm ccs_pfx                      =  ccs_pfx
 \end{code}
 There are no more explicit $\tau[\dots]$ prefixes.
-We invoke $conm$ here,
-(and $ai2a$, see below)
+We invoke $conm$
 from within $tl$ as we do the translation.
 
 \subsubsection{$tl$ --- from CCStau to CSP}
@@ -410,16 +409,31 @@ tl (CCStauPar ccs1 ccs2)  =  Par sync csp1 csp2
         sync  =  alpha csp1 `S.intersection` alpha csp2
 \end{code}
 
+When we have done this initial translation into CSP,
+we then hide the explicit CSP ``tau'' event:
+\begin{eqnarray*}
+   htau(P) &\defeq& P \hide \setof{tau}
+\end{eqnarray*}
+\begin{code}
+htau :: CSP -> CSP
+htau  = Hide (S.singleton tauInCSP)
+\end{code}
+
 For $P$ a CCSTau process:
 \begin{eqnarray*}
-    t2csp(P) &\defeq& (tl \circ conm \circ g^* \circ ix)(P) \hide \setof{tau}
+    t2csp &\defeq& htau \circ tl \circ conm \circ g^* \circ ix
 \end{eqnarray*}
 \begin{code}
 t2csp :: CCSTau -> CSP
-t2csp ccs = Hide (S.singleton tauInCSP) $ tl $ gsp S.empty $ ix ccs
+t2csp   = htau . tl . gsp0 . ix 
 \end{code}
 
-The final step hides synchronisation names (doubly-indexed)
+The final steps remove the indices from the alphabet of the CSP process:
+\begin{itemize}
+  \item remove indices from singly-indexed events ($ai2a$)
+  \item top-level hiding of doubly-indexed events ($haij$)
+\end{itemize}
+hides synchronisation names (doubly-indexed)
 and removes indices from singly-indexed events.
 \begin{eqnarray*}
    ai2a
@@ -442,22 +456,28 @@ dropI :: Event -> Event
 dropI (Lbl (lbl,(One _)))  =  Lbl (lbl,None)
 dropI pfx                  =  pfx
 \end{code}
-We can apply this as translation to CSP is done.
 
+\begin{eqnarray*}
+   haij(P) &\defeq& P \hide \setof{a_{ij}\mid a_{ij} \in \Alf(P)}
+\end{eqnarray*}
+\begin{code}
+haij :: CSP -> CSP
+haij csp
+  = Hide syncevts csp
+    where
+      syncevts = S.filter dblIndexes $ alpha csp
+      dblIndexes (Lbl (_,Two _ _))  =  True
+      dblIndexes _                  =  False
+\end{code}
+
+The full translation is the following sequence of transformations:
 \begin{eqnarray*}
    ccs2csp(P)
    &\defeq&
-   (ai2a \circ t2csp \circ c2ccs\tau)(P)
-   \hide
-   \setof{a_{ij}\mid a_{ij} \in \Alf t2csp(c2ccs\tau(P))}
+   (haij \circ ai2a \circ t2csp \circ c2ccs\tau)(P)
+\\ &=& (haij \circ ai2a \circ htau \circ tl \circ conm \circ g^* \circ ix \circ c2ccs\tau)(P)
 \end{eqnarray*}
 \begin{code}
 ccs2csp :: CCS -> CSP
-ccs2csp ccs
-  = Hide syncevts $ ai2a csp0
-  where
-    csp0 = t2csp $ c2ccsT ccs
-    syncevts = S.filter dblIndexes $ alpha csp0
-    dblIndexes (Lbl (_,Two _ _))  =  True
-    dblIndexes _                  =  False
+ccs2csp  =  haij . ai2a . t2csp . c2ccsT
 \end{code}

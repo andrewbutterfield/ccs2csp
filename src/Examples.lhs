@@ -58,21 +58,23 @@ to generate a list of same, paired with meaningful names.
 \begin{code}
 genExample :: CCS ->  [(String,Proc)]
 genExample ccs
- = [ ("ccs  ", CCS ccs)
-   , ("ccsT ", CCS ccstau)
-   , ("ccsTi", CCS ccsi)
-   , ("g*0  ", CCS ccsg)
-   , ("tlp  ", CSP tlp)
-   , ("tlh  ", CSP tlh)
-   , ("csp  ", CSP csp)
+ = [ ("ccs     ", CCS ccs)
+   , (" c2ccsT ", CCS ccstau)
+   , (" ix     ", CCS ccsi)
+   , (" g*0    ", CCS ccsg)
+   , (" tl     ", CSP tlp)
+   , (" htau   ", CSP tlht)
+   , (" ai2a   ", CSP tlri)
+   , (" csp    ", CSP csp)
    ]
  where
    ccstau = c2ccsT ccs
    ccsi = ix ccstau
    ccsg = gsp0 ccsi
    tlp  = tl ccsg
-   tlh = t2csp ccstau
-   csp = ccs2csp ccs
+   tlht = htau tlp
+   tlri = ai2a tlht
+   csp = haij tlri
 \end{code}
 
 We use \texttt{runExample} to display that list

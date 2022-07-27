@@ -111,16 +111,19 @@ main
        if helpout config
        then help
        else if mode config == DoProgram
-       then putStrLn ("Do Program!")
+       then putStrLn ("CCS Program translation not yet implemented!")
        else do
-         putStrLn ("Do Process!")
+         putStrLn ("Translating CCS Process to CSPm...")
          ccsm <- hGetContents $ ccsfile config
          case processParser ccsm of
            Left err -> putStrLn err
            Right proc
             -> let
-                 csp = ccs2csp $ proc2CCS proc
+                 generation = genExample $ proc2CCS proc
+                 (CSP csp) = snd $ last generation
+                 -- csp = ccs2csp $ proc2CCS proc
                  cspm = generateCSPm "PROC" csp
-               in do hPutStr (cspfile config) cspm
+               in do putStrLn $ showExample generation
+                     hPutStr (cspfile config) cspm
                      hClose (cspfile config)
 \end{code}
