@@ -122,7 +122,7 @@ main
                  generation = genExample $ proc2CCS proc
                  (CSP csp) = snd $ last generation
                  -- csp = ccs2csp $ proc2CCS proc
-                 cspm = generateCSPm "PROC" csp
+                 cspm = generateCSPm "FROM_CCS" csp
                in do putStrLn $ showExample generation
                      hPutStr (cspfile config) cspm
                      hClose (cspfile config)
