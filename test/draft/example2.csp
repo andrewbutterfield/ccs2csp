@@ -6,7 +6,7 @@ channel a1_2
 channel a_bar
 channel a1_3
 
-PROC =
+FROM_CSS =
   (
    (
     (
@@ -14,23 +14,23 @@ PROC =
       (
        (
         (
-         a -> 
+         a ->
            STOP
         []
          (
-          a1_2 -> 
+          a1_2 ->
             STOP
          []
-          a1_3 -> 
+          a1_3 ->
             STOP
          )
         )
        [| {a1_2} |]
         (
-         a_bar -> 
+         a_bar ->
            STOP
         []
-         a1_2 -> 
+         a1_2 ->
            STOP
         )
        )
@@ -39,10 +39,10 @@ PROC =
       {}
      [| {a1_3} |]
       (
-       a_bar -> 
+       a_bar ->
          STOP
       []
-       a1_3 -> 
+       a1_3 ->
          STOP
       )
      )

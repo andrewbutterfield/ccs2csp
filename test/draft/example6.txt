@@ -1,0 +1,10 @@
+Translating CCS Process to CSPm...
+ccs       : CCS (a.b) ↾ a
+-c2ccsT-> : CCS (a.b) ↾ a
+-ix->     : CCS (a1.b2) ↾ a1
+-g*0->    : CCS (a1.b2) ↾ a1
+-tl->     : CSP (a1 → b2 |a1| Stop)
+
+-htau->   : CSP (a1 → b2 |a1| Stop)\TAU
+-ai2a->   : CSP (a → b |a| Stop)\TAU
+-haij->   : CSP (a → b |a| Stop)\TAU

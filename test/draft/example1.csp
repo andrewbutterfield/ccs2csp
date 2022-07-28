@@ -4,19 +4,19 @@ channel a
 channel b
 channel TAU
 
-PROC =
+FROM_CSS =
   (
    (
     (
      (
-      a -> 
+      a ->
         STOP
      []
-      b -> 
+      b ->
         STOP
      )
     []
-     TAU -> 
+     TAU ->
        STOP
     )
    )
