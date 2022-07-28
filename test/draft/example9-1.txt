@@ -1,0 +1,10 @@
+Translating CCS Process to CSPm...
+ccs       : CCS ((a | a_bar) ↾ a + b)
+-c2ccsT-> : CCS (((a |T a_bar) \T tau[a|a_bar]) ↾ a + b)
+-ix->     : CCS ((a1 |T a2_bar) ↾ {a1,a2_bar} + b3)
+-g*0->    : CCS (((a1 + a1_2) |T (a2_bar + a1_2_bar)) ↾ {a1,a2_bar} + b3)
+-tl->     : CSP (((a1 □ a1_2) |a1_2| (a2_bar □ a1_2)) |a1,a2_bar| Stop □ b3)
+-htau->   : CSP (((a1 □ a1_2) |a1_2| (a2_bar □ a1_2)) |a1,a2_bar| Stop □ b3)\TAU
+-ai2a->   : CSP (((a □ a1_2) |a1_2| (a_bar □ a1_2)) |a,a_bar| Stop □ b)\TAU
+-haij->   : CSP ((((a □ a1_2) |a1_2| (a_bar □ a1_2)) |a,a_bar| Stop □ b)\TAU)\a1_2
+
