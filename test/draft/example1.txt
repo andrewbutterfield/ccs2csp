@@ -1,0 +1,10 @@
+Translating CCS Process to CSPm...
+ccs       : CCS ((a + b) + tau)
+-c2ccsT-> : CCS ((a + b) + tau)
+-ix->     : CCS ((a1 + b2) + tau)
+-g*0->    : CCS ((a1 + b2) + tau)
+-tl->     : CSP (a1 □ b2 □ TAU)
+-htau->   : CSP (a1 □ b2 □ TAU)\TAU
+-ai2a->   : CSP (a □ b □ TAU)\TAU
+-haij->   : CSP (a □ b □ TAU)\TAU
+
