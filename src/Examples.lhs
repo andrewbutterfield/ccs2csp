@@ -32,7 +32,7 @@ that takes CCS input and generates CSP,
 showing all the intermediate steps.
 This is used by the main program.
 
-We also have some hard-code examples,
+We also have some hard-coded examples,
 which can be accessed by loading this module
 into the Haskell interpreter (\texttt{ghci}).
 This should be done via the \texttt{stack} utility.
@@ -49,6 +49,16 @@ Those at the top-level are simple tests.
 Sub-directories contain examples from papers,
 both published (e.g. \texttt{SEFM21/}\cite{DBLP:conf/sefm/NgondiKB21}),
 and in-preparation/review (\texttt{draft/}).
+
+For each example, we provide:
+\begin{itemize}
+  \item A CCS source file: \texttt{exampleN.proc}
+  \item A transcript of the translations stages: \texttt{exampleN.txt}
+  \item The generated CSP file: \texttt{exampleN.csp}
+  \item The graph of the CSP process rendered by FDR4: \texttt{exampleN.png}
+\end{itemize}
+Some examples that do not derive from a top-level CCS process
+just have a text file explaining they are out of scope.
 
 
 \newpage
