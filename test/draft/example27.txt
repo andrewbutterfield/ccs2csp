@@ -1,3 +1,3 @@
-Example 7 does not derive from a top-level CCS term.
+Example 27 does not derive from a top-level CCS term.
 
 The |T and \T operators are introduced by c2ccsT when transforming CCS parallel.

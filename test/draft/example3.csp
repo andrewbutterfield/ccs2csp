@@ -4,19 +4,19 @@ channel a
 channel b
 channel TAU
 
-FROM_CSS =
+FROM_CCS =
   (
    (
     (
      (
-      a ->
+      a -> 
         STOP
      []
-      b ->
+      b -> 
         STOP
      )
     []
-     TAU ->
+     TAU -> 
        STOP
     )
    )

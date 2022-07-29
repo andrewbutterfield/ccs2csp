@@ -1,3 +1,3 @@
-Examples 5.1 and 5.2 do not derive from a single CCS term.
+Examples 21.1 and 21.2 do not derive from a single CCS term.
 
 The |T and \T operators are introduced by c2ccsT when transforming CCS parallel.

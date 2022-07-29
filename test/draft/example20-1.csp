@@ -12,18 +12,18 @@ FROM_CCS =
      (
       (
        (
-        a ->
+        a -> 
           STOP
        []
-        a1_2 ->
+        a1_2 -> 
           STOP
        )
       [| {a1_2} |]
        (
-        a_bar ->
+        a_bar -> 
           STOP
        []
-        a1_2 ->
+        a1_2 -> 
           STOP
        )
       )

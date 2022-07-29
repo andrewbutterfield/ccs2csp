@@ -6,7 +6,7 @@ channel a1_3
 channel a1_2
 channel a_bar
 
-FROM_CSS =
+FROM_CCS =
   (
    (
     (
@@ -15,23 +15,23 @@ FROM_CSS =
        (
         (
          (
-          a ->
+          a -> 
             STOP
          []
           (
-           a1_2 ->
+           a1_2 -> 
              STOP
           []
-           a1_3 ->
+           a1_3 -> 
              STOP
           )
          )
         [| {a1_2} |]
          (
-          a_bar ->
+          a_bar -> 
             STOP
          []
-          a1_2 ->
+          a1_2 -> 
             STOP
          )
         )
@@ -42,7 +42,7 @@ FROM_CSS =
        STOP
       )
      [| {} |]
-      a_bar ->
+      a_bar -> 
         STOP
      )
     )
